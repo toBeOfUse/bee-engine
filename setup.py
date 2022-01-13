@@ -5,4 +5,5 @@ setup(
     version='0.5.0',
     packages=['bee_engine'],
     install_requires=["inflect", "cairosvg", "pillow", "aiohttp[speedups]"],
+    include_package_data=True
 )
