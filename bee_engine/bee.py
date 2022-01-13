@@ -12,6 +12,7 @@ from urllib.error import HTTPError
 
 from .render import BeeRenderer
 from .data_access import get_word_rank
+from .trie_explorer.queries import get_wiktionary_trie
 
 import aiohttp
 import inflect

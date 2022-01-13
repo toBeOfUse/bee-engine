@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 bee-engine = {editable = true, path = "."}
+cython = "*"
 
 [dev-packages]
 autopep8 = "*"

@@ -10,6 +10,8 @@ async def demo():
     print(", ".join([current.center]+current.outside))
     print("full-puzzle hint chart:")
     print(current.get_unguessed_hints().format_all_for_discord())
+    print("unacknowledged words:")
+    print(current.get_wiktionary_alternative_answers())
     print("saving puzzle graphic to images/tests")
     graphic = await current.render()
     base_path = Path(__file__).parent
