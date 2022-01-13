@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional
 from io import BytesIO
 import traceback
@@ -173,7 +174,7 @@ def get_wiktionary_trie() -> Trie:
     """
     global _wiktionary_trie_cached
     if _wiktionary_trie_cached is None:
-        wiktionary_words_bytes_path = "wiktionary-trie.bin"
+        wiktionary_words_bytes_path = Path(__file__).parent/"wiktionary-trie.bin"
         try:
             with open(wiktionary_words_bytes_path, "rb") as wwb:
                 wiktionary_words = Trie(buffer=wwb.read())
