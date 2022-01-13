@@ -1,4 +1,6 @@
 bee_engine/data/puzzles.db
+bee_engine/images/tests/*
+!bee_engine/images/tests/.gitkeep
 
 
 # Byte-compiled / optimized / DLL files

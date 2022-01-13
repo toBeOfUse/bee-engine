@@ -75,7 +75,7 @@ class SVGTemplateRenderer(BeeRenderer):
             self.base_svg = base_file.read()
 
     def __repr__(self):
-        return f"{self.__class__.__name__} for {self.template_path}"
+        return f"{self.__class__.__name__} for {Path(self.template_path).name}"
 
     def __eq__(self, other: SVGTemplateRenderer):
         return self.base_svg == other.base_svg
@@ -441,7 +441,7 @@ class AnimationCompositorRenderer(BeeRenderer):
             return result
 
 
-for path in Path("images/").glob("puzzle_template_*.svg"):
+for path in (Path(__file__).parent/Path("images/")).glob("puzzle_template_*.svg"):
     BeeRenderer.available_renderers.append(SVGTextTemplateRenderer(path))
 
 # BeeRenderer.available_renderers.append(SVGImageTemplateRenderer(
@@ -474,7 +474,8 @@ for path in Path("images/").glob("puzzle_template_*.svg"):
 
 
 async def test():
-    from spellingbee import SpellingBee
+    from .bee import SpellingBee
+    base_path = Path(__file__).parent
     rs = BeeRenderer.available_renderers
     letters = random.sample(["B", "C", "D", "E", "F", "G"], 6)
     if len(sys.argv) > 1:
@@ -487,10 +488,12 @@ async def test():
                 continue
         start = default_timer()
         test_puzzle = SpellingBee(-1, "A", letters, [], [])
-        render = await r.render(test_puzzle)
+        render = await test_puzzle.render(r)
         type = test_puzzle.image_file_type
         renderer_name_slug = str(r).replace(" ", "_").replace("\\", "-").replace("/", "-")
-        with open(f'images/testrenders/{renderer_name_slug}.{type}', "wb+") as output:
+        with open(
+                base_path/Path(f'images/tests/{renderer_name_slug}.{type}'),
+                "wb+") as output:
             output.write(render)
         print(r, "took", round((default_timer()-start)*1000), "ms")
 
