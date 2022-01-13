@@ -41,9 +41,7 @@ class SpellingBee():
     letters to create words that are at least 4 letters long. At least one "pangram,"
     a word that uses every letter, can be formed. This class stores the necessary
     data to represent the puzzle and judge answers, has serialization mechanisms to
-    save the puzzle and the answers that have come in so far in a simple SQLite
-    database, can render itself to a PNG, and includes a functions to allow it to
-    interact with discord Message objects.
+    save the puzzle in a simple SQLite database, and can render itself to an image.
     """
 
     class GuessJudgement(Enum):
@@ -109,7 +107,8 @@ class SpellingBee():
             outside: list[str],
             pangrams: list[str],
             answers: list[str]):
-        """Constructs the puzzle object. You will probably want to fetch a new puzzle
+        """
+        Constructs the puzzle object. You will probably want to fetch a new puzzle
         from the NYTimes or an old puzzle from the database instead of calling this
         directly.
 
@@ -147,8 +146,9 @@ class SpellingBee():
 
     def guess(self, word: str, gotten_words: set[str] = set()) -> set[GuessJudgement]:
         """
-        determines whether a word counts for a point and/or is a pangram and/or has
-        already been gotten. uses the GuessJudgement enum inner class.
+        Determines whether a word counts for a point and/or is a pangram and/or has
+        already been gotten; returns the result using the GuessJudgement enum inner
+        class. It automatically adds to the gotten_words set you pass in.
         """
         result = set()
         w = word.lower()
@@ -159,13 +159,12 @@ class SpellingBee():
             if w in gotten_words:
                 result.add(self.GuessJudgement.already_gotten)
             gotten_words.add(w)
-            self.save()
         else:
             result.add(self.GuessJudgement.wrong_word)
         return result
 
     def get_unguessed_words(self, sort=True, gotten_words: set[str] = set()) -> list[str]:
-        """returns the heretofore unguessed words in a list sorted from the least to
+        """Returns the heretofore unguessed words in a list sorted from the least to
         the most common words."""
         unguessed = list(self.answers - gotten_words)
         if sort:
@@ -177,10 +176,10 @@ class SpellingBee():
 
     def get_wiktionary_alternative_answers(self) -> list[str]:
         """
-        Returns the words that use the required letters and are english words
+        Returns the words that use the required letters and are English words
         according to Wiktionary (according to data obtained by
         https://github.com/tatuylonen/wiktextract) but aren't in the official answers
-        list, sorted from longest to shortest
+        list, sorted from longest to shortest.
         """
         wiktionary_words = get_wiktionary_trie()
         all_letters = [x.lower() for x in self.outside+[self.center]]
@@ -208,10 +207,12 @@ class SpellingBee():
     async def render(self, renderer: BeeRenderer = None) -> bytes:
         """Renders the puzzle to an image; returns the image file as bytes and caches
         it in the image instance variable. If you do not pass in an instance of a
-        subclass of PuzzleRenderer, one will be chosen at random"""
+        subclass of PuzzleRenderer, one will be chosen at random. You can find out
+        what image format was used by accessing image_file_type."""
         if renderer is None:
             renderer = BeeRenderer.get_random_renderer()
         self.image = await renderer.render(self)
+        self.save()
         return self.image
 
     @property
