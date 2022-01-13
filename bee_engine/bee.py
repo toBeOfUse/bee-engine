@@ -1,5 +1,6 @@
 from __future__ import annotations
 from os import PathLike
+from pathlib import Path
 import traceback
 import json
 import sqlite3
@@ -7,7 +8,7 @@ from enum import Enum
 from collections import defaultdict
 from typing import Optional
 import re
-from datetime import datetime
+from urllib.error import HTTPError
 
 from .render import BeeRenderer
 from .data_access import get_word_rank
@@ -27,6 +28,9 @@ def num(n: int):
 
 def plural(word: str, n: int):
     return inflecter.plural(word, n)
+
+
+default_db = Path(__file__).parent / Path("data/puzzles.db")
 
 
 class SpellingBee():
@@ -99,19 +103,29 @@ class SpellingBee():
 
     def __init__(
             self,
-            originally_loaded: int,
+            day: str,
             center: str,
             outside: list[str],
             pangrams: list[str],
             answers: list[str]):
-        self.timestamp = originally_loaded
+        """Constructs the puzzle object. You will probably want to fetch a new puzzle
+        from the NYTimes or an old puzzle from the database instead of calling this
+        directly.
+
+        Args:
+            day (str): YYYY-MM-DD, like "2021-12-31"
+            center (str): Single-character string containing the center, required
+            letter of the bee.
+            outside (list[str]): Single character strings containing the other usable
+            letters for the bee.
+            pangrams (list[str]): Valid bee answers that use every available letter.
+            answers (list[str]): All valid bee answers.
+        """
+        self.day = day
         self.center = center.upper()
         self.outside = [l.upper() for l in outside]
         self.pangrams = set(p.lower() for p in pangrams)
         self.answers = set(a.lower() for a in answers)
-        if (all(l in [self.center]+self.outside for l in "ACAB") and
-                self.center in "ACAB"):
-            self.answers.add("acab")
         for word in self.pangrams:
             self.answers.add(word)  # shouldn't be necessary but just in case
         self.image: Optional[bytes] = None
@@ -157,8 +171,8 @@ class SpellingBee():
             unguessed.sort(key=lambda w: get_word_rank(w), reverse=True)
         return unguessed
 
-    def get_unguessed_hints(self) -> HintTable:
-        return self.HintTable(self.get_unguessed_words(sort=False))
+    def get_unguessed_hints(self, gotten_words: set[str] = set()) -> HintTable:
+        return self.HintTable(self.get_unguessed_words(False, gotten_words))
 
     def get_wiktionary_alternative_answers(self) -> list[str]:
         """
@@ -211,15 +225,25 @@ class SpellingBee():
             return "jpg"
 
     @classmethod
-    async def fetch_from_nyt(cls) -> "SpellingBee":
+    async def fetch_from_nyt(cls) -> SpellingBee:
+        """Returns the spelling bee currently marked as today's on the NYT website.
+        Raises HTTPError if the website is not accessible or AssertionError if the
+        data on the website has an unexpected form."""
         async with aiohttp.ClientSession() as session:
-            async with session.get('https://www.nytimes.com/puzzles/spelling-bee') as resp:
+            url = 'https://www.nytimes.com/puzzles/spelling-bee'
+            async with session.get(url) as resp:
+                if not resp.ok:
+                    raise HTTPError(url, resp.status, "could not fetch spelling bee")
                 html = await resp.text()
         game_data = re.search("window.gameData = (.*?)</script>", html)
         if game_data:
             game = json.loads(game_data.group(1))["today"]
+            assert all(
+                x in game
+                for x in ["printDate", "centerLetter", "outerLetters", "pangrams", "answers"])
+            assert re.match(r"^\d{4}-\d{2}-\d{2}$", game["printDate"]) is not None
             return cls(
-                int(datetime.now().timestamp()),
+                game["printDate"],
                 game["centerLetter"],
                 game["outerLetters"],
                 game["pangrams"],
@@ -255,7 +279,7 @@ class SpellingBee():
             reactions.append("🤝")
         return reactions
 
-    def persist(self, db_path: PathLike = "data/puzzles.db"):
+    def persist(self, db_path: PathLike = default_db):
         """Sets a puzzle object up to be saved in the given database. This method
         must be called on an object for it to persist and be returnable by
         retrieve_last_saved. After it is called, the puzzle object will automatically
@@ -267,21 +291,14 @@ class SpellingBee():
     def get_connection(self, db_path: PathLike) -> Optional[sqlite3.Connection]:
         """Connects to the database, ensures the spelling_bee table exists with the
         correct schema, and returns the connection."""
-        latest_version = 1
         if db_path is None:
             return None
         db = sqlite3.connect(db_path)
         cur = db.cursor()
         cur.execute("""create table if not exists spelling_bee
-            (timestamp integer primary key, message_id integer, center text, outside text,
-            pangrams text, answers text, gotten_words text);""")
-        cur.execute("""create index if not exists chrono on spelling_bee (timestamp desc);""")
-
-        current_version = cur.execute("pragma user_version").fetchone()[0]
-        if current_version == 0:
-            cur.execute("alter table spelling_bee add column image bytes")
-            cur.execute(f"pragma user_version={latest_version}")
-            db.commit()
+            (day text primary key, center text, outside text, image bytes,
+            pangrams text, answers text);""")
+        cur.execute("""create index if not exists chrono on spelling_bee (day);""")
         return db
 
     def save(self):
@@ -292,41 +309,48 @@ class SpellingBee():
         cur = db.cursor()
         cur.execute(
             """insert or replace into spelling_bee
-            (timestamp, message_id, center, outside, pangrams, answers, gotten_words, image)
-            values (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (self.timestamp, self.message_id, self.center, json.dumps(list(self.outside)),
+            (day, center, outside, pangrams, answers, image)
+            values (?, ?, ?, ?, ?, ?)""",
+            (self.day, self.center, json.dumps(list(self.outside)),
              json.dumps(list(self.pangrams)),
              json.dumps(list(self.answers)),
-             json.dumps(list(self.gotten_words)),
              self.image))
         db.commit()
         db.close()
 
     @classmethod
-    def retrieve_last_saved(cls, db_path: str = "data/puzzles.db") -> Optional["SpellingBee"]:
-        """Retrieves the most recently saved puzzle from the SQLite database. Note
-        that the returned object is separate from the database record until/unless
-        persist() is called to assign it to the same database again."""
+    def retrieve_saved(
+            cls, db_path: str = default_db, day: str = "latest") -> Optional[SpellingBee]:
+        """Retrieves a saved puzzle from the SQLite database. Note that the returned
+        object is separate from the database record until/unless persist() is called
+        to save it to the same database again."""
         db = cls.get_connection(db_path)
         cur = db.cursor()
         try:
-            latest = cur.execute("""select
-                timestamp, message_id, image, center, outside, pangrams, answers, gotten_words
-                from spelling_bee order by timestamp desc limit 1""").fetchone()
-            if latest is None:
+            query = """select
+                day, image, center, outside, pangrams, answers
+                from spelling_bee """
+            if day == "latest":
+                query += "order by day desc limit 1"
+                parameters = []
+            else:
+                query += "where day=?"
+                parameters = [day]
+
+            fetched = cur.execute(query, parameters).fetchone()
+            if fetched is None:
                 db.close()
                 return None
             else:
                 db.close()
                 loaded_puzzle = cls(
-                    latest[0],
-                    latest[3],
-                    *[json.loads(x) for x in latest[4:]])
-                loaded_puzzle.message_id = latest[1]
-                loaded_puzzle.image = latest[2]
+                    fetched[0],
+                    fetched[2],
+                    *[json.loads(x) for x in fetched[3:]])
+                loaded_puzzle.image = fetched[2]
                 return loaded_puzzle
         except:
-            print("couldn't load latest spelling bee from database")
+            print(f"couldn't load spelling bee for \"{day}\" from database")
             traceback.print_exc()
             db.close()
             return None
