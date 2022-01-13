@@ -19,7 +19,7 @@ inflecter = inflect.engine()
 
 
 def copula(c: int):
-    return inflecter.plural("are", c)
+    return inflecter.plural_verb("is", c)
 
 
 def num(n: int):
