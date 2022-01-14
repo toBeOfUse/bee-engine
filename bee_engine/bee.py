@@ -143,7 +143,7 @@ class SpellingBee():
     def is_pangram(self, word: str) -> bool:
         return word.lower() in self.pangrams
 
-    def guess(self, word: str, gotten_words: set[str] = set()) -> set[GuessJudgement]:
+    def guess(self, word: str, gotten_words: set[str] = set()) -> set[SpellingBee.GuessJudgement]:
         """
         Determines whether a word counts for a point and/or is a pangram and/or has
         already been gotten; returns the result using the GuessJudgement enum inner
@@ -170,7 +170,7 @@ class SpellingBee():
             unguessed.sort(key=lambda w: get_word_rank(w), reverse=True)
         return unguessed
 
-    def get_unguessed_hints(self, gotten_words: set[str] = set()) -> HintTable:
+    def get_unguessed_hints(self, gotten_words: set[str] = set()) -> SpellingBee.HintTable:
         return self.HintTable(self.get_unguessed_words(False, gotten_words))
 
     def get_wiktionary_alternative_answers(self) -> list[str]:
