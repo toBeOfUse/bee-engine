@@ -358,60 +358,49 @@ class SpellingBee():
 
 
 class SessionBasedSpellingBee(SpellingBee):
-    @classmethod
-    def get_connection(self, db_path: PathLike) -> Optional[sqlite3.Connection]:
-        conn = super().get_connection(db_path)
-        if conn is None:
-            return None
-        cur = conn.cursor()
-        cur.execute("""create table if not exists bee_progress
-            (session_id integer primary key, day text, gotten text);""")
-        return conn
-
-
-class SingleSessionSpellingBee(SessionBasedSpellingBee):
     """
-    SpellingBee that also stores and persists a "gotten words" set containing all of
-    the successful guesses so far. This subclass only stores a single guessing
-    session at a time, so only the latest instance of it that is .save()ed will be
-    retrievable; the intent is for a new instance of this class to be made with
-    fetch_from_nyt each day and then saved to be made "live." However, old sessions'
-    guesses will linger in the database with each puzzle's date attached and of
-    course multiple instances of this class can exist in memory at once. If you
-    want to use this class without persistence, just pass in the string ":memory:" as
-    the db_path when creating instances with the constructor or fetch_from_nyt.
+    Extends the SpellingBee class by also folding in a set of successful guesses so
+    far that are associated with a specific session ID. These guesses are also
+    persisted in the database, with the session ID being the key used for retrieval.
     """
 
     def __init__(
             self,
             base: SpellingBee,
             gotten_words: set[str] = set(),
+            session_id: Optional[int] = None,
             db_path=default_db):
+        """
+        Constructs a SessionBasedSpellingBee object with arbitrary starting data. You
+        will probably want to fetch existing sessions or use fetch_from_nyt instead
+        of calling this directly. If you don't provide a session_id, a unique one
+        will be generated for you.
+        """
         super().__init__(
             base.day, base.center, base.outside, base.pangrams, base.answers
         )
         self.gotten_words = gotten_words
         self.db_path = db_path
         conn = SingleSessionSpellingBee.get_connection(db_path)
-        # get_connection ensures that this table exists and has at least one row
-        self.session_id = conn.execute(
-            "select current_session_id from current_session_id;"
-        ).fetchone()[0]+1
+        if session_id is None:
+            last_session = conn.execute(
+                "select session_id from bee_sessions order by session_id desc limit 1;"
+            ).fetchone()
+            if last_session is None:
+                self.session_id = 0
+            else:
+                self.session_id = last_session[0]+1
+        else:
+            self.session_id = session_id
 
     @classmethod
     def get_connection(self, db_path: PathLike) -> Optional[sqlite3.Connection]:
         conn = super().get_connection(db_path)
+        if conn is None:
+            return None
         cur = conn.cursor()
-        # SingleSessionSpellingBee uses a single-row, single-column table to keep
-        # track of the id of the current session within the guesses table
-        exists = cur.execute(
-            """select name from sqlite_master where
-                type='table' AND name='current_session_id';""").fetchone()
-        if exists is None:
-            cur.execute("""create table if not exists current_session_id
-                (current_session_id integer primary key);""")
-            cur.execute("""insert into current_session_id (current_session_id)
-                values (-1);""")
+        cur.execute("""create table if not exists bee_sessions
+            (session_id integer primary key, day text, gotten text);""")
         return conn
 
     def save_guesses(self):
@@ -420,11 +409,7 @@ class SingleSessionSpellingBee(SessionBasedSpellingBee):
         conn = self.get_connection(self.db_path)
         cur = conn.cursor()
         cur.execute(
-            "update current_session_id set current_session_id=?;",
-            (self.session_id,)
-        )
-        cur.execute(
-            """insert or replace into bee_progress (session_id, day, gotten)
+            """insert or replace into bee_sessions (session_id, day, gotten)
             values (?, ?, ?);""",
             (self.session_id, self.day, json.dumps(list(self.gotten_words)))
         )
@@ -444,24 +429,19 @@ class SingleSessionSpellingBee(SessionBasedSpellingBee):
         self.save_guesses()
 
     @classmethod
-    def retrieve_saved(cls, db_path: str = default_db) -> Optional[SpellingBee]:
+    def retrieve_saved(cls, session_id: int, db_path: str = default_db) -> Optional[SpellingBee]:
         cur = cls.get_connection(db_path).cursor()
-        session_id = cur.execute(
-            "select current_session_id from current_session_id;"
-        ).fetchone()[0]
-        if session_id == -1:
-            return None
         active_session = cur.execute(
-            "select day, gotten from bee_progress where session_id=?;",
+            "select day, gotten from bee_sessions where session_id=?;",
             (session_id, )
         )
         base = super().retrieve_saved(db_path, active_session[0])
         gotten = set(json.loads(active_session[1]))
-        return cls(base, gotten, db_path)
+        return cls(base, gotten, session_id, db_path)
 
     @classmethod
     async def fetch_from_nyt(cls, db_path=default_db) -> SingleSessionSpellingBee:
-        return cls(await super().fetch_from_nyt(), set(), db_path)
+        return cls(await super().fetch_from_nyt(), db_path=db_path)
 
     @property
     def percentage_complete(self):
@@ -479,5 +459,48 @@ class SingleSessionSpellingBee(SessionBasedSpellingBee):
         return super().get_unguessed_hints(self.gotten_words)
 
 
-class MultiSessionSpellingBee(SessionBasedSpellingBee):
-    pass
+class SingleSessionSpellingBee(SessionBasedSpellingBee):
+    """
+    SpellingBee that stores and persists a "gotten words" set containing all of
+    the successful guesses so far. This subclass only stores a single guessing
+    session at a time, so only the latest instance of it that is .save()ed will be
+    retrievable; the intent is for a new instance of this class to be made with
+    fetch_from_nyt each day and then saved to be made "live." However, old sessions'
+    guesses will linger in the database with each puzzle's date attached, and of
+    course multiple instances of this class can exist in memory at once. If you
+    want to use this class without persistence, just pass in the string ":memory:" as
+    the db_path when creating instances with the constructor or fetch_from_nyt.
+    """
+
+    @classmethod
+    def get_connection(self, db_path: PathLike) -> Optional[sqlite3.Connection]:
+        conn = super().get_connection(db_path)
+        cur = conn.cursor()
+        # SingleSessionSpellingBee uses a single-row, single-column table to keep
+        # track of the id of the current session within the guesses table
+        exists = cur.execute(
+            """select name from sqlite_master where
+                type='table' AND name='single_session_current_id';""").fetchone()
+        if exists is None:
+            cur.execute("""create table if not exists single_session_current_id
+                (single_session_current_id integer primary key);""")
+            cur.execute("""insert into single_session_current_id (single_session_current_id)
+                values (-1);""")
+        return conn
+
+    def save_guesses(self):
+        super().save_guesses()
+        self.get_connection(self.db_path).execute(
+            "update single_session_current_id set single_session_current_id=?;",
+            (self.session_id,)
+        )
+
+    @classmethod
+    def retrieve_saved(cls, db_path: str = default_db) -> Optional[SpellingBee]:
+        conn = cls.get_connection()
+        session_id = conn.execute(
+            "select single_session_current_id from single_session_current_id;"
+        ).fetchone()[0]
+        if session_id == -1:
+            return None
+        return super().retrieve_saved(session_id, db_path)
