@@ -12,6 +12,8 @@ setup(
     version='0.5.0',
     packages=['bee_engine'],
     install_requires=["inflect", "cairosvg", "pillow", "aiohttp[speedups]"],
-    include_package_data=True,
+    package_data={
+        "": ["*.svg", "*.txt", "words.db"],
+    },
     ext_modules=cythonize([trie_explorer])
 )
