@@ -45,10 +45,10 @@ class SpellingBee():
     """
 
     class GuessJudgement(Enum):
-        wrong_word = 1
-        good_word = 2
-        pangram = 3
-        already_gotten = 4
+        wrong_word = "unaccepted word"
+        good_word = "accepted word"
+        pangram = "pangram"
+        already_gotten = "already gotten"
 
     class HintTable:
         def __init__(self, words: list[str]):
