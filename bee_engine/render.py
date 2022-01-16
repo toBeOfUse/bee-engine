@@ -85,6 +85,8 @@ class BeeRenderer(metaclass=abc.ABCMeta):
 
 
 class SVGTemplateRenderer(BeeRenderer):
+    output_format = "png"
+
     def __init__(self, template_path: PathLike):
         self.template_path = template_path
         with open(template_path) as base_file:
