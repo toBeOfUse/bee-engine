@@ -29,7 +29,7 @@ async def demo():
     print(puzzle.guess("chunked"))             # {"accepted word", "pangram"}
 
     print(puzzle.guess("chunked", {"hunk", "chunked"}))
-    # {"accepted word", "already gotten", "pangram}
+    # {"accepted word", "already gotten", "pangram"}
 
     print(puzzle.guess("batarang"))            # {"unaccepted word"}
 ```
