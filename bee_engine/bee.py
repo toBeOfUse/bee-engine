@@ -207,13 +207,15 @@ class SpellingBee():
                 result.append(word)
         return sorted(result, key=len, reverse=True)
 
-    async def render(self, renderer: BeeRenderer = None) -> bytes:
+    async def render(self, renderer_name: str = "") -> bytes:
         """Renders the puzzle to an image; returns the image file as bytes and caches
         it in the image instance variable. If you do not pass in an instance of a
         subclass of PuzzleRenderer, one will be chosen at random. You can find out
         what image format was used by accessing image_file_type."""
-        if renderer is None:
+        if renderer_name == "":
             renderer = BeeRenderer.get_random_renderer()
+        else:
+            renderer = BeeRenderer.get_renderer(renderer_name)
         self.image = await renderer.render(self)
         self.save()
         return self.image
