@@ -367,6 +367,9 @@ class SessionBasedSpellingBee(SpellingBee):
     Extends the SpellingBee class by also folding in a set of successful guesses so
     far that are associated with a specific session ID. These guesses are also
     persisted in the database, with the session ID being the key used for retrieval.
+    Along with the guesses, an arbitrary dict (`metadata`) is stored, that can be
+    used for any non-puzzle-related information that you want to store. The contents
+    of the dict must be JSON-serializable.
     """
 
     def __init__(
@@ -374,6 +377,7 @@ class SessionBasedSpellingBee(SpellingBee):
             base: SpellingBee,
             gotten_words: set[str] = None,
             session_id: Optional[int] = None,
+            metadata: dict = {},
             db_path=default_db):
         """
         Constructs a SessionBasedSpellingBee object with arbitrary starting data. You
@@ -397,7 +401,17 @@ class SessionBasedSpellingBee(SpellingBee):
                 self.session_id = last_session[0]+1
         else:
             self.session_id = session_id
+        self._metadata = metadata
         self.save()
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+    @metadata.setter
+    def set_metadata(self, new_data: dict):
+        self._metadata = new_data
+        self.save_session()
 
     @classmethod
     def get_connection(self, db_path: PathLike) -> Optional[sqlite3.Connection]:
@@ -406,19 +420,19 @@ class SessionBasedSpellingBee(SpellingBee):
             return None
         cur = conn.cursor()
         cur.execute("""create table if not exists bee_sessions
-            (session_id integer primary key, day text, gotten text);""")
+            (session_id integer primary key, day text, gotten text, metadata text);""")
         return conn
 
-    def save_guesses(self):
+    def save_session(self):
         if self.db_path is None:
             return
         conn = self.get_connection(self.db_path)
         cur = conn.cursor()
         cur.execute(
-            """insert or replace into bee_sessions (session_id, day, gotten)
+            """insert or replace into bee_sessions (session_id, day, gotten, metadata)
             values (?, ?, ?);""",
-            (self.session_id, self.day, json.dumps(list(self.gotten_words)))
-        )
+            (self.session_id, self.day, json.dumps(list(self.gotten_words)),
+             json.dumps(self.metadata)))
         conn.commit()
         conn.close()
 
@@ -427,13 +441,13 @@ class SessionBasedSpellingBee(SpellingBee):
         This method saves the puzzle and the current set of guesses into the
         database. Since the base SpellingBee rarely changes (at time of writing, only
         when a new graphic is rendered for it), and it automatically saves itself
-        when it does, save_guesses can usually be called instead as an optimization
+        when it does, save_session can usually be called instead as an optimization
         unless you are saving the same session to a new database.
         """
         if db_path is None:
             db_path = self.db_path
         super().save()
-        self.save_guesses()
+        self.save_session()
 
     @classmethod
     def retrieve_saved(
@@ -441,7 +455,7 @@ class SessionBasedSpellingBee(SpellingBee):
         conn = cls.get_connection(db_path)
         cur = conn.cursor()
         active_session = cur.execute(
-            "select day, gotten from bee_sessions where session_id=?;",
+            "select day, gotten, metadata from bee_sessions where session_id=?;",
             (session_id, )
         ).fetchone()
         conn.close()
@@ -449,7 +463,8 @@ class SessionBasedSpellingBee(SpellingBee):
         if base is None:
             return None
         gotten = set(json.loads(active_session[1]))
-        return cls(base, gotten, session_id, db_path)
+        metadata = json.loads(active_session[2])
+        return cls(base, gotten, session_id, metadata, db_path)
 
     @classmethod
     async def fetch_from_nyt(cls, db_path=default_db) -> SingleSessionSpellingBee:
@@ -463,7 +478,7 @@ class SessionBasedSpellingBee(SpellingBee):
 
     def guess(self, word: str) -> set[SpellingBee.GuessJudgement]:
         result = super().guess(word, self.gotten_words)
-        self.save_guesses()
+        self.save_session()
         return result
 
     def get_unguessed_words(self, sort=True) -> list[str]:
@@ -503,8 +518,8 @@ class SingleSessionSpellingBee(SessionBasedSpellingBee):
             conn.commit()
         return conn
 
-    def save_guesses(self):
-        super().save_guesses()
+    def save_session(self):
+        super().save_session()
         conn = self.get_connection(self.db_path)
         conn.execute(
             "update single_session_current_id set single_session_current_id=?;",
