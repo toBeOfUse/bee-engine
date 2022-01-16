@@ -435,7 +435,7 @@ class SessionBasedSpellingBee(SpellingBee):
         )
         self.gotten_words = gotten_words if gotten_words is not None else set()
         self.db_path = db_path
-        conn = SingleSessionSpellingBee.get_connection(db_path)
+        conn = SessionBasedSpellingBee.get_connection(db_path)
         if session_id is None:
             last_session = conn.execute(
                 "select session_id from bee_sessions order by session_id desc limit 1;"
@@ -475,13 +475,13 @@ class SessionBasedSpellingBee(SpellingBee):
         cur = conn.cursor()
         cur.execute(
             """insert or replace into bee_sessions (session_id, day, gotten, metadata)
-            values (?, ?, ?);""",
+            values (?, ?, ?, ?);""",
             (self.session_id, self.day, json.dumps(list(self.gotten_words)),
              json.dumps(self.metadata)))
         conn.commit()
         conn.close()
 
-    def save(self, db_path: Optional[str] = None):
+    def save(self):
         """
         This method saves the puzzle and the current set of guesses into the
         database. Since the base SpellingBee rarely changes (at time of writing, only
@@ -489,8 +489,6 @@ class SessionBasedSpellingBee(SpellingBee):
         when it does, save_session can usually be called instead as an optimization
         unless you are saving the same session to a new database.
         """
-        if db_path is None:
-            db_path = self.db_path
         super().save()
         self.save_session()
 
