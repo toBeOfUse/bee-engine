@@ -39,7 +39,7 @@ async def demo():
 ```python3
 # The hint table is accessible too, through the SpellingBee.HintTable class:
 print(puzzle.get_hints().format_table())
-"""4  5  6  7  8  9  Σ
+""" 4  5  6  7  8  9  Σ
     C  -  4  -  3  -  -  7
     E  -  -  1  -  -  -  1
     H  4  2  1  1  -  -  8
@@ -58,7 +58,7 @@ print(puzzle.get_hints().format_pangram_count())
 ### The flashy stuff:
 
 ```python3
-# And just for fun, a list of words that are on Wiktionary and have all the right letters
+# Just for fun, a list of words that are on Wiktionary and have all the right letters
 # but aren't accepted:
 
 print(puzzle.get_wiktionary_alternative_answers())
@@ -145,6 +145,7 @@ async def session_demo():
     # are just SessionBasedSpellingBee objects that all automatically access the same session
     # by keeping track of the ID of the latest session created through their class method:
     interop = SessionBasedSpellingBee.retrieve_saved(game.session_id, "mypuzzles.db")
+    print(game.session_id)                # 0
     print(interop.session_id)             # 0
     print(interop.guessed_words)          # {"hunk", "chunk"}
 ```
