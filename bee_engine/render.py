@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from collections import defaultdict
+import re
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from bee import SpellingBee
 
@@ -50,10 +52,24 @@ class BeeRenderer(metaclass=abc.ABCMeta):
     available_renderers should be populated with instances of subclasses to make them
     chooseable by SpellingBee.render()."""
     available_renderers: list[BeeRenderer] = []
+    _renderer_lookup: defaultdict[str, BeeRenderer] = defaultdict(lambda: None)
 
     @classmethod
     def get_random_renderer(cls):
         return random.choice(cls.available_renderers)
+
+    @classmethod
+    def get_renderer(cls, name: str) -> Optional[BeeRenderer]:
+        return cls._renderer_lookup[name]
+
+    @classmethod
+    def register_renderer(cls, name: str, renderer: BeeRenderer):
+        cls.available_renderers.append(renderer)
+        cls._renderer_lookup[name] = renderer
+
+    @classmethod
+    def get_available_renderer_names(cls) -> list[str]:
+        return list(cls._renderer_lookup.keys())
 
     @abc.abstractmethod
     def __init__(self):
@@ -442,7 +458,8 @@ class AnimationCompositorRenderer(BeeRenderer):
 
 
 for path in (Path(__file__).parent/Path("images/")).glob("puzzle_template_*.svg"):
-    BeeRenderer.available_renderers.append(SVGTextTemplateRenderer(path))
+    name = re.match("^puzzle_template_(\w*?).svg$", path.name).group(1)
+    BeeRenderer.register_renderer(name, SVGTextTemplateRenderer(str(path)))
 
 # BeeRenderer.available_renderers.append(SVGImageTemplateRenderer(
 #     Path("images", "image_puzzle_template_1.svg"), Path("fonts", "pencil")))
@@ -477,6 +494,8 @@ async def test():
     from .bee import SpellingBee
     base_path = Path(__file__).parent
     rs = BeeRenderer.available_renderers
+    print("available renderers:")
+    print(BeeRenderer.get_available_renderer_names())
     letters = random.sample(["B", "C", "D", "E", "F", "G"], 6)
     if len(sys.argv) > 1:
         print(f"looking for renderers with {sys.argv[1]} in name")
