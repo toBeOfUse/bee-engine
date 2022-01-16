@@ -171,6 +171,9 @@ class SpellingBee():
             unguessed.sort(key=lambda w: get_word_rank(w), reverse=True)
         return unguessed
 
+    def get_hints(self) -> SpellingBee.HintTable:
+        return self.HintTable(list(self.answers))
+
     def get_unguessed_hints(self, gotten_words: set[str]) -> SpellingBee.HintTable:
         return self.HintTable(self.get_unguessed_words(gotten_words, False))
 
