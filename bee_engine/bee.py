@@ -281,6 +281,51 @@ class SpellingBee():
             reactions.append("🤝")
         return reactions
 
+    def list_words(
+        self,
+        words: set[str],
+        separate_pangrams=True,
+        enclose_with: list[str] = ["", ""],
+        initial_capital=False
+    ) -> str:
+        """Displays a formatted list containing the valid answers out of the set of
+        words that you pass in listed in alphabetical order.
+
+        Args:
+            words (set[str]): words!
+            separate_pangrams (bool, optional): Moves the pangrams to the end of the
+            list and precedes them with the text "Pangrams: ". Defaults to True.
+            enclose_with (list[str], optional): allows you to automatically surround
+            the words with tags like ["<em>", "</em>"] or ["||", "||"]. Defaults to
+            ["", ""].
+            initial_capital (bool, optional): Starts the string off with a capital
+            letter. Defaults to False.
+
+        Returns:
+            Something like "Game, fame, lame, and same. Pangrams: medieval."
+        """
+        matching_words = words & self.answers
+        found_words = sorted(
+            list(
+                matching_words-(self.pangrams if separate_pangrams else set())
+            )
+        )
+        listed = inflecter.join(found_words)
+        if initial_capital:
+            listed = listed.capitalize
+        listed = enclose_with[0]+listed+"."+enclose_with[1]
+        if separate_pangrams:
+            found_pangrams = sorted(list(matching_words & self.pangrams))
+            if len(found_pangrams) > 0:
+                listed += (
+                    " Pangrams: " +
+                    enclose_with[0] +
+                    inflecter.join(found_pangrams) +
+                    "." +
+                    enclose_with[1]
+                )
+        return listed
+
     def set_db(self, db_path: PathLike = default_db):
         """Sets a puzzle object up to be saved in the given database. This method
         must be called on a SpellingBee object for it to persist and be returnable by
@@ -486,6 +531,18 @@ class SessionBasedSpellingBee(SpellingBee):
 
     def get_unguessed_hints(self) -> SpellingBee.HintTable:
         return super().get_unguessed_hints(self.gotten_words)
+
+    def list_gotten_words(
+            self, separate_pangrams=True, enclose_with: list[str] = ["", ""],
+            initial_capital=False) -> str:
+        """Lists the words gotten in this session so far in accordance with the
+        formatting rules documented in the superclass method."""
+        return super().list_words(
+            self.gotten_words,
+            separate_pangrams,
+            enclose_with,
+            initial_capital
+        )
 
 
 class SingleSessionSpellingBee(SessionBasedSpellingBee):
