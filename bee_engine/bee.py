@@ -257,10 +257,17 @@ class SpellingBee():
                 game["pangrams"],
                 game["answers"])
 
-    def respond_to_guesses(self, guess: str) -> list[str]:
+    def respond_to_guesses(self, guess: str, already_gotten: set[str]=set()) -> list[str]:
         """
-        Discord bot-specific function for awarding points in the form of reactions;
-        returns a list of emojis.
+        A wrapper around the `guess` method that takes a string with,
+        potentially, multiple words in it instead of just one, and returns
+        emojis instead of string constants. The list of emojis returned starts
+        with a thumbs_up if there are any accepted answers, then number emojis
+        signifying the count if there are more than one accepted answers, then a
+        fried egg emoji if any of the accepted answers are pangrams, then a
+        handshake emoji if any of the words pulled out of `guess` are also in
+        `already_gotten`. As when using `guess`, the new words are then added to
+        `already_gotten`.
         """
         num_emojis = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
         reactions = []
@@ -269,7 +276,7 @@ class SpellingBee():
         pangram = False
         already_gotten = False
         for word in words:
-            guess_result = self.guess(word)
+            guess_result = self.guess(word, already_gotten)
             if SpellingBee.GuessJudgement.good_word in guess_result:
                 points += 1
             if SpellingBee.GuessJudgement.pangram in guess_result:
@@ -332,7 +339,7 @@ class SpellingBee():
                 )
         return listed
 
-    def set_db(self, db_path: PathLike = default_db):
+    def persist_to(self, db_path: PathLike = default_db):
         """Sets a puzzle object up to be saved in the given database. This method
         must be called on a SpellingBee object for it to persist and be returnable by
         retrieve_saved. After it is called, the puzzle object will automatically
@@ -377,7 +384,7 @@ class SpellingBee():
     def retrieve_saved(
             cls, day: str = "latest", db_path: str = default_db) -> Optional[SpellingBee]:
         """Retrieves a saved puzzle from the SQLite database. Note that the returned
-        object is separate from the database record until/unless set_db() is called
+        object is separate from the database record until/unless persist_to() is called
         to save it to the same database again."""
         db = cls.get_connection(db_path)
         cur = db.cursor()
@@ -415,12 +422,14 @@ class SpellingBee():
 
 class SessionBasedSpellingBee(SpellingBee):
     """
-    Extends the SpellingBee class by also folding in a set of successful guesses so
-    far that are associated with a specific session ID. These guesses are also
-    persisted in the database, with the session ID being the key used for retrieval.
-    Along with the guesses, an arbitrary dict (`metadata`) is stored, that can be
-    used for any non-puzzle-related information that you want to store. The contents
-    of the dict must be JSON-serializable.
+    Extends the SpellingBee class by also storing a set of successful guesses
+    so far that are associated with a specific session UUID. These guesses can
+    also be persisted in the database, with the session ID being the key used
+    for retrieval. You can store a "primary" session ID using the class method
+    `save_primary_session_id`. Along with the guesses, an arbitrary dict
+    (`metadata`) is stored, that can be used for any non-puzzle-related
+    information that you want to store. The contents of the dict must be
+    JSON-serializable.
     """
 
     def __init__(
@@ -457,8 +466,34 @@ class SessionBasedSpellingBee(SpellingBee):
         cur = conn.cursor()
         cur.execute("""create table if not exists bee_sessions
             (session_id text primary key, day text, gotten text, metadata text);""")
+        exists = cur.execute(
+            """select name from sqlite_master where
+                type='table' AND name='single_session_current_id';""").fetchone()
+        if exists is None:
+            cur.execute("""create table if not exists single_session_current_id
+                (single_session_current_id text primary key);""")
+            cur.execute("""insert into single_session_current_id (single_session_current_id)
+                values (''));""")
         return conn
 
+    @classmethod
+    def save_primary_session_id(cls, session_id: str, db_path: str):
+        """
+        This method gives you the ability to save a specific session id into
+        the database to a table devoted to storing the current "primary"
+        session. You can then retrieve the session with this ID later, by
+        calling `retrieve_saved` with `"primary"` as the `session_id`
+        argument. This is intended as a convenience method for anyone who only
+        wants to persist a single session at once.
+        """
+        conn = cls.get_connection(db_path)
+        conn.execute(
+            "update single_session_current_id set single_session_current_id=?;",
+            (session_id,)
+        )
+        conn.commit()
+        conn.close()
+        
     def save_session(self):
         if self.db_path is None:
             return
@@ -475,10 +510,9 @@ class SessionBasedSpellingBee(SpellingBee):
     def save(self):
         """
         This method saves the puzzle and the current set of guesses into the
-        database. Since the base SpellingBee rarely changes (at time of writing, only
-        when a new graphic is rendered for it), and it automatically saves itself
-        when it does, save_session can usually be called instead as an optimization
-        unless you are saving the same session to a new database.
+        database. There should be no need to call this manually; just call
+        persist_to with a database path and all changes will be auto-saved then
+        and thereafter.
         """
         super().save()
         self.save_session()
@@ -487,8 +521,23 @@ class SessionBasedSpellingBee(SpellingBee):
     def retrieve_saved(
             cls, 
             session_id: str, 
+            db_path: str = default_db
+        ) -> Optional[SessionBasedSpellingBee]:
+        """
+        Method allowing you to retrieve a specific session from the database.
+        If you only want to persist one session at a time and don't want to
+        track session IDs yourself, just use `specifiy_primary_session` to save
+        an ID in a database, and then retrieve the session with that ID from the
+        database by putting in `"latest"` as the `session_id` argument here.
+        """
         conn = cls.get_connection(db_path)
         cur = conn.cursor()
+        if session_id == "latest":
+            session_id = conn.execute(
+                "select single_session_current_id from single_session_current_id;"
+            ).fetchone()[0]
+            if session_id == "":
+                return None
         active_session = cur.execute(
             "select day, gotten, metadata from bee_sessions where session_id=?;",
             (session_id, )
@@ -502,10 +551,10 @@ class SessionBasedSpellingBee(SpellingBee):
         return cls(base, gotten, session_id, metadata, db_path)
 
     @classmethod
-    async def fetch_from_nyt(cls, db_path=default_db) -> SingleSessionSpellingBee:
-        result = cls(await super().fetch_from_nyt(), db_path=db_path)
-        result.save()
-        return result
+    async def fetch_from_nyt(cls) -> SessionBasedSpellingBee:
+        """Convenience method for fetching a SpellingBee from the NYT and
+        creating a new session for it in one swoop."""
+        return cls(await SpellingBee.fetch_from_nyt())
 
     @property
     def percentage_complete(self):
@@ -533,55 +582,6 @@ class SessionBasedSpellingBee(SpellingBee):
             enclose_with,
             initial_capital
         )
-
-
-class SingleSessionSpellingBee(SessionBasedSpellingBee):
-    """
-    SpellingBee that stores and persists a "gotten words" set containing all of
-    the successful guesses so far. This subclass only stores a single guessing
-    session at a time, so only the latest instance of it that is .save()ed will be
-    retrievable; the intent is for a new instance of this class to be made with
-    fetch_from_nyt each day and then saved to be made "live." However, old sessions'
-    guesses will linger in the database with each puzzle's date attached, and of
-    course multiple instances of this class can exist in memory at once. If you want
-    to use this class without persistence, just pass in the string ":memory:" as the
-    db_path when creating new sessions with fetch_from_nyt.
-    """
-
-    @classmethod
-    def get_connection(self, db_path: PathLike) -> Optional[sqlite3.Connection]:
-        conn = super().get_connection(db_path)
-        cur = conn.cursor()
-        # SingleSessionSpellingBee uses a single-row, single-column table to keep
-        # track of the id of the current session within the sessions table
-        exists = cur.execute(
-            """select name from sqlite_master where
-                type='table' AND name='single_session_current_id';""").fetchone()
-        if exists is None:
-            cur.execute("""create table if not exists single_session_current_id
-                (single_session_current_id integer primary key);""")
-            cur.execute("""insert into single_session_current_id (single_session_current_id)
-                values (-1);""")
-            conn.commit()
-        return conn
-
-    def save_session(self):
-        super().save_session()
-        conn = self.get_connection(self.db_path)
-        conn.execute(
-            "update single_session_current_id set single_session_current_id=?;",
-            (self.session_id,)
-        )
-        conn.commit()
-        conn.close()
-
-    @classmethod
-    def retrieve_saved(cls, db_path: str = default_db) -> Optional[SingleSessionSpellingBee]:
-        conn = cls.get_connection(db_path)
-        session_id = conn.execute(
-            "select single_session_current_id from single_session_current_id;"
-        ).fetchone()[0]
-        if session_id == -1:
-            return None
-        conn.close()
-        return super().retrieve_saved(session_id, db_path)
+    
+    def respond_to_guesses(self, guess: str) -> list[str]:
+        return super().respond_to_guesses(guess, self.gotten_words)
