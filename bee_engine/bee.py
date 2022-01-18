@@ -9,6 +9,7 @@ from collections import defaultdict
 from typing import Optional
 import re
 from urllib.error import HTTPError
+from uuid import uuid4 as uuid
 
 from .render import BeeRenderer
 from .data_access import get_word_rank
@@ -426,33 +427,18 @@ class SessionBasedSpellingBee(SpellingBee):
             self,
             base: SpellingBee,
             gotten_words: set[str] = None,
-            session_id: Optional[int] = None,
-            metadata: dict = {},
-            db_path=default_db):
+            metadata: dict = {}):
         """
-        Constructs a SessionBasedSpellingBee object with arbitrary starting data. You
-        will probably want to fetch existing sessions or use fetch_from_nyt instead
-        of calling this directly. If you don't provide a session_id, a unique one
-        will be generated for you.
+        Constructs a new SessionBasedSpellingBee object with a unique string ID
+        and arbitrary starting data.
         """
         super().__init__(
             base.day, base.center, base.outside, base.pangrams, base.answers
         )
         self.gotten_words = gotten_words if gotten_words is not None else set()
-        self.db_path = db_path
-        conn = SessionBasedSpellingBee.get_connection(db_path)
-        if session_id is None:
-            last_session = conn.execute(
-                "select session_id from bee_sessions order by session_id desc limit 1;"
-            ).fetchone()
-            if last_session is None:
-                self.session_id = 0
-            else:
-                self.session_id = last_session[0]+1
-        else:
-            self.session_id = session_id
+        self.session_id: str = str(uuid())
+        self.db_path = None
         self._metadata = metadata
-        self.save()
 
     @property
     def metadata(self):
@@ -470,7 +456,7 @@ class SessionBasedSpellingBee(SpellingBee):
             return None
         cur = conn.cursor()
         cur.execute("""create table if not exists bee_sessions
-            (session_id integer primary key, day text, gotten text, metadata text);""")
+            (session_id text primary key, day text, gotten text, metadata text);""")
         return conn
 
     def save_session(self):
@@ -499,7 +485,8 @@ class SessionBasedSpellingBee(SpellingBee):
 
     @classmethod
     def retrieve_saved(
-            cls, session_id: int, db_path: str = default_db) -> Optional[SessionBasedSpellingBee]:
+            cls, 
+            session_id: str, 
         conn = cls.get_connection(db_path)
         cur = conn.cursor()
         active_session = cur.execute(
