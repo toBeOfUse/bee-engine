@@ -1,4 +1,4 @@
-bee_engine/data/puzzles.db
+bee_engine/data/test.db
 bee_engine/images/tests/*
 !bee_engine/images/tests/.gitkeep
 *.blend1

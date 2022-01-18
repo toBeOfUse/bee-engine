@@ -493,6 +493,39 @@ class SessionBasedSpellingBee(SpellingBee):
         )
         conn.commit()
         conn.close()
+    
+    @classmethod
+    def get_primary_session_id(cls, db_path: str) -> Optional[str]:
+        """
+        Gets the primary session ID saved into the given database with
+        `save_primary_session_id`, if any. If you want to retrieve the session
+        itself, you can call `retrieve_saved` with `"primary"` as the
+        `session_id` argument.
+        """
+        conn = cls.get_connection(db_path)
+        session_id = conn.execute(
+            "select single_session_current_id from single_session_current_id;"
+        ).fetchone()[0]
+        conn.close()
+        if session_id == "":
+            return None
+        else:
+            return session_id
+    
+    def make_primary_session(self):
+        """
+        Convenience method to call `save_primary_session_id` with this session's
+        ID and database file. This only has an effect if this object has already
+        had its database file path set with a call to `persist_to`. This is
+        because I assume that if you don't need persistence, you can keep track
+        of a specific session just by storing it in a variable called `primary`
+        or something.
+        """
+        if self.db_path is None:
+            return
+        SessionBasedSpellingBee.save_primary_session_id(
+            self.session_id, self.db_path
+        )
         
     def save_session(self):
         if self.db_path is None:
@@ -528,15 +561,13 @@ class SessionBasedSpellingBee(SpellingBee):
         If you only want to persist one session at a time and don't want to
         track session IDs yourself, just use `specifiy_primary_session` to save
         an ID in a database, and then retrieve the session with that ID from the
-        database by putting in `"latest"` as the `session_id` argument here.
+        database by putting in `"primary"` as the `session_id` argument here.
         """
         conn = cls.get_connection(db_path)
         cur = conn.cursor()
-        if session_id == "latest":
-            session_id = conn.execute(
-                "select single_session_current_id from single_session_current_id;"
-            ).fetchone()[0]
-            if session_id == "":
+        if session_id == "primary":
+            session_id = SessionBasedSpellingBee.get_primary_session_id(db_path)
+            if session_id is None:
                 return None
         active_session = cur.execute(
             "select day, gotten, metadata from bee_sessions where session_id=?;",
