@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from . import SpellingBee, SingleSessionSpellingBee, SessionBasedSpellingBee
+from . import SpellingBee, SessionBasedSpellingBee
 
 GJ = SpellingBee.GuessJudgement
 
@@ -22,7 +22,7 @@ async def demo():
             base_path/Path("images/tests/today-test."+current.image_file_type),
             "wb+") as image_file:
         image_file.write(graphic)
-    current.set_db(test_db)
+    current.persist_to(test_db)
     retrieved = SpellingBee.retrieve_saved("latest", test_db)
     print("current spelling bee letters after saving and retrieving from database:")
     print(", ".join([retrieved.center]+retrieved.outside))
@@ -36,7 +36,7 @@ async def demo():
                     getattr(retrieved_by_day, attr))
         except AssertionError:
             print(f"problem with {attr} attribute after database retrieval!")
-            print(f"values for {attr} are:")
+            print(f"values sfor {attr} are:")
             print(getattr(current, attr)[:100])
             print(getattr(retrieved, attr)[:100])
             print(getattr(retrieved_by_day, attr)[:100])
@@ -58,7 +58,7 @@ async def demo():
     assert GJ.already_gotten not in current.guess(an_answer)
     assert GJ.already_gotten in current.guess(an_answer, {an_answer})
 
-    session = SessionBasedSpellingBee(current, set(), 1, test_db)
+    session = SessionBasedSpellingBee(current)
     session.guess(an_answer)
     assert an_answer in session.gotten_words
     assert GJ.already_gotten in session.guess(an_answer)
@@ -68,23 +68,17 @@ async def demo():
             GJ.already_gotten not in pangram_guess and
             GJ.wrong_word not in pangram_guess)
     assert GJ.already_gotten in session.guess(a_pangram)
+    session.persist_to(test_db)
 
-    retrieved_session = SessionBasedSpellingBee.retrieve_saved(1, test_db)
+    retrieved_session = SessionBasedSpellingBee.retrieve_saved(session.session_id, test_db)
     assert an_answer in retrieved_session.gotten_words
     assert a_pangram in retrieved_session.gotten_words
     assert GJ.already_gotten in retrieved_session.guess(an_answer)
     assert GJ.already_gotten in retrieved_session.guess(a_pangram)
 
-    assert SingleSessionSpellingBee.retrieve_saved(test_db) is None
-    single = SingleSessionSpellingBee(current, db_path=test_db)
-    assert single.session_id != 1
-    single.guess(an_answer)
-    retrieved_single = SingleSessionSpellingBee.retrieve_saved(test_db)
-    assert single.session_id == retrieved_single.session_id
-    assert an_answer in retrieved_single.gotten_words
-    assert a_pangram not in retrieved_single.gotten_words
-    assert GJ.already_gotten in retrieved_single.guess(an_answer)
-    assert GJ.already_gotten not in retrieved_single.guess(a_pangram)
+    session.make_primary_session()
+    assert SessionBasedSpellingBee.get_primary_session_id(test_db) == session.session_id
+    assert SessionBasedSpellingBee.retrieve_saved("primary", test_db) == session
 
     print("demo complete; tests passed")
 
