@@ -175,6 +175,7 @@ def get_wiktionary_trie() -> Trie:
     global _wiktionary_trie_cached
     if _wiktionary_trie_cached is None:
         wiktionary_words_bytes_path = Path(__file__).parent/"wiktionary-trie.bin"
+        wiktionary_words_text_path = Path(__file__).parent/"all-wiktionary-english-words.txt"
         try:
             with open(wiktionary_words_bytes_path, "rb") as wwb:
                 wiktionary_words = Trie(buffer=wwb.read())
@@ -183,7 +184,7 @@ def get_wiktionary_trie() -> Trie:
                   "reconstituting it (may take a few seconds)")
             traceback.print_exc()
             wiktionary_words = Trie()
-            with open("all-wiktionary-english-words.txt", encoding="utf-8") as wiktionary_file:
+            with open(wiktionary_words_text_path, encoding="utf-8") as wiktionary_file:
                 for line in wiktionary_file:
                     word = line.strip()
                     eligible = True
