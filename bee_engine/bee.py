@@ -133,7 +133,7 @@ class SpellingBee():
         self.db_path: Optional[str] = None
 
     def __eq__(self, other):
-        return self.center+self.outside == other.center+other.outside
+        return [self.center]+self.outside == [other.center]+other.outside
 
     def percentage_complete(self, gotten_words: set[str]):
         return round(len(gotten_words) / len(self.answers) * 100, 1)
@@ -444,6 +444,7 @@ class SessionBasedSpellingBee(SpellingBee):
         super().__init__(
             base.day, base.center, base.outside, base.pangrams, base.answers
         )
+        self.image = base.image
         self.gotten_words = gotten_words if gotten_words is not None else set()
         self.session_id: str = str(uuid())
         self.db_path = None
@@ -473,7 +474,7 @@ class SessionBasedSpellingBee(SpellingBee):
             cur.execute("""create table if not exists single_session_current_id
                 (single_session_current_id text primary key);""")
             cur.execute("""insert into single_session_current_id (single_session_current_id)
-                values (''));""")
+                values ('');""")
         return conn
 
     @classmethod
@@ -562,6 +563,8 @@ class SessionBasedSpellingBee(SpellingBee):
         track session IDs yourself, just use `specifiy_primary_session` to save
         an ID in a database, and then retrieve the session with that ID from the
         database by putting in `"primary"` as the `session_id` argument here.
+        Note that you will still have to call `persist_to` for further changes
+        to this session to be saved in the database.
         """
         conn = cls.get_connection(db_path)
         cur = conn.cursor()
@@ -579,7 +582,9 @@ class SessionBasedSpellingBee(SpellingBee):
             return None
         gotten = set(json.loads(active_session[1]))
         metadata = json.loads(active_session[2])
-        return cls(base, gotten, session_id, metadata, db_path)
+        result = cls(base, gotten, metadata)
+        result.session_id = session_id
+        return result
 
     @classmethod
     async def fetch_from_nyt(cls) -> SessionBasedSpellingBee:
