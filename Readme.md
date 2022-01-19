@@ -79,6 +79,8 @@ async def render_demo():
 asyncio.run(render_demo())
 ```
 
+(The following fonts are used by the renderers: Liberation Sans, Kingthings Exeter, fs Tahoma 8px, Minecraft Font by JDGraphics, and Arial. If any of these are not installed on your computer, the renderer will fall back to a default font, and the result will not look as good.)
+
 ![Example puzzle graphic with Windows XP Color-picker background](example1.png)
 
 ```python3
@@ -114,6 +116,9 @@ older_puzzle = SpellingBee.retrieve_saved("2022-01-01", "mypuzzles.db")
 
 # If you update the SpellingBee object by rendering a new image after calling
 # persist_to, that change will be automatically saved.
+
+# (Spelling Bees in the database are uniquely identified by their "day" property,
+# so only one SpellingBee object for a given day can be stored at once.)
 ```
 
 ### Sessions:
