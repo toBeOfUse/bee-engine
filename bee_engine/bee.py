@@ -6,7 +6,7 @@ import json
 import sqlite3
 from enum import Enum
 from collections import defaultdict
-from typing import Optional
+from typing import Literal, Optional
 import re
 from urllib.error import HTTPError
 from uuid import uuid4 as uuid
@@ -242,10 +242,17 @@ class SpellingBee():
             return "jpg"
 
     @classmethod
-    async def fetch_from_nyt(cls) -> SpellingBee:
-        """Returns the spelling bee currently marked as today's on the NYT website.
-        Raises HTTPError if the website is not accessible or AssertionError if the
-        data on the website has an unexpected form."""
+    async def fetch_from_nyt(
+        cls, 
+        which: Literal["today", "yesterday"] = "today"
+    ) -> SpellingBee:
+        """
+        Returns a spelling bee from the NYT website. Two puzzles can currently
+        be extracted from its code: today's and yesterday's. Raises HTTPError if
+        the website is not accessible or AssertionError if the data on the
+        website has an unexpected form (e. g. they changed their code and an
+        update to this package is needed.)
+        """
         async with aiohttp.ClientSession() as session:
             url = 'https://www.nytimes.com/puzzles/spelling-bee'
             async with session.get(url) as resp:
@@ -254,10 +261,19 @@ class SpellingBee():
                 html = await resp.text()
         game_data = re.search("window.gameData = (.*?)</script>", html)
         if game_data:
-            game = json.loads(game_data.group(1))["today"]
+            game = json.loads(game_data.group(1))[which]
             assert all(
                 x in game
                 for x in ["printDate", "centerLetter", "outerLetters", "pangrams", "answers"])
+            assert type(game["printDate"]) is str
+            assert type(game["centerLetter"]) is str
+            assert type(game["outerLetters"]) is list
+            assert all(type(x) is str for x in game["outerLetters"])
+            assert len(game["outerLetters"]) == 6
+            assert type(game["pangrams"]) is list
+            assert all(type(x) is str for x in game["pangrams"])
+            assert type(game["answers"]) is list
+            assert all(type(x) is str for x in game["answers"])
             assert re.match(r"^\d{4}-\d{2}-\d{2}$", game["printDate"]) is not None
             return cls(
                 game["printDate"],
