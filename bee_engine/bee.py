@@ -164,19 +164,26 @@ class SpellingBee():
             result.add(self.GuessJudgement.wrong_word)
         return result
 
-    def get_unguessed_words(self, gotten_words: set[str], sort=True) -> list[str]:
-        """Returns the heretofore unguessed words in a list sorted from the least to
-        the most common words."""
+    def get_unguessed_words(
+        self, 
+        gotten_words: set[str], 
+        sort_key=get_word_rank
+    ) -> list[str]:
+        """
+        Returns the heretofore unguessed words in a list sorted from the least
+        to the most common words. Or you can pass in your own sort key function,
+        or None for no sorting.
+        """
         unguessed = list(self.answers - gotten_words)
-        if sort:
-            unguessed.sort(key=lambda w: get_word_rank(w), reverse=True)
+        if sort_key is not None:
+            unguessed.sort(key=sort_key, reverse=True)
         return unguessed
 
     def get_hints(self) -> SpellingBee.HintTable:
         return self.HintTable(list(self.answers))
 
     def get_unguessed_hints(self, gotten_words: set[str]) -> SpellingBee.HintTable:
-        return self.HintTable(self.get_unguessed_words(gotten_words, False))
+        return self.HintTable(self.get_unguessed_words(gotten_words, None))
 
     def get_wiktionary_alternative_answers(self) -> list[str]:
         """
@@ -209,10 +216,12 @@ class SpellingBee():
         return sorted(result, key=len, reverse=True)
 
     async def render(self, renderer_name: str = "") -> bytes:
-        """Renders the puzzle to an image; returns the image file as bytes and caches
-        it in the image instance variable. If you do not pass in an instance of a
-        subclass of PuzzleRenderer, one will be chosen at random. You can find out
-        what image format was used by accessing image_file_type."""
+        """
+        Renders the puzzle to an image; returns the image file as bytes and
+        caches it in the image instance variable. If you do not pass in the
+        string name of a BeeRenderer, one will be chosen at random. You can find
+        out what image format was used by accessing image_file_type.
+        """
         if renderer_name == "":
             renderer = BeeRenderer.get_random_renderer()
         else:
@@ -469,12 +478,13 @@ class SessionBee(SpellingBee):
             (session_id text primary key, day text, gotten text, metadata text);""")
         exists = cur.execute(
             """select name from sqlite_master where
-                type='table' AND name='single_session_current_id';""").fetchone()
+                type='table' AND name='primary_session_id';""").fetchone()
         if exists is None:
-            cur.execute("""create table if not exists single_session_current_id
-                (single_session_current_id text primary key);""")
-            cur.execute("""insert into single_session_current_id (single_session_current_id)
-                values ('');""")
+            cur.execute("""create table if not exists primary_session_id
+                (primary_session_id text primary key);""")
+            cur.execute("""insert into primary_session_id (primary_session_id)
+                values ('None');""")
+            conn.commit()
         return conn
 
     @classmethod
@@ -489,7 +499,7 @@ class SessionBee(SpellingBee):
         """
         conn = cls.get_connection(db_path)
         conn.execute(
-            "update single_session_current_id set single_session_current_id=?;",
+            "update primary_session_id set primary_session_id=?;",
             (session_id,)
         )
         conn.commit()
@@ -505,10 +515,10 @@ class SessionBee(SpellingBee):
         """
         conn = cls.get_connection(db_path)
         session_id = conn.execute(
-            "select single_session_current_id from single_session_current_id;"
+            "select primary_session_id from primary_session_id;"
         ).fetchone()[0]
         conn.close()
-        if session_id == "":
+        if session_id == "None":
             return None
         else:
             return session_id
@@ -577,6 +587,8 @@ class SessionBee(SpellingBee):
             (session_id, )
         ).fetchone()
         conn.close()
+        if active_session is None:
+            return None
         base = SpellingBee.retrieve_saved(active_session[0], db_path)
         if base is None:
             return None
@@ -601,8 +613,8 @@ class SessionBee(SpellingBee):
         self.save_session()
         return result
 
-    def get_unguessed_words(self, sort=True) -> list[str]:
-        return super().get_unguessed_words(self.gotten_words, sort)
+    def get_unguessed_words(self, sort_key=get_word_rank) -> list[str]:
+        return super().get_unguessed_words(self.gotten_words, sort_key)
 
     def get_unguessed_hints(self) -> SpellingBee.HintTable:
         return super().get_unguessed_hints(self.gotten_words)
