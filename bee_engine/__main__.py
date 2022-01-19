@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from . import SpellingBee, SessionBasedSpellingBee
+from . import SpellingBee, SessionBee
 
 GJ = SpellingBee.GuessJudgement
 
@@ -58,7 +58,7 @@ async def demo():
     assert GJ.already_gotten not in current.guess(an_answer)
     assert GJ.already_gotten in current.guess(an_answer, {an_answer})
 
-    session = SessionBasedSpellingBee(current)
+    session = SessionBee(current)
     session.guess(an_answer)
     assert an_answer in session.gotten_words
     assert GJ.already_gotten in session.guess(an_answer)
@@ -70,15 +70,17 @@ async def demo():
     assert GJ.already_gotten in session.guess(a_pangram)
     session.persist_to(test_db)
 
-    retrieved_session = SessionBasedSpellingBee.retrieve_saved(session.session_id, test_db)
+    retrieved_session = SessionBee.retrieve_saved(session.session_id, test_db)
     assert an_answer in retrieved_session.gotten_words
     assert a_pangram in retrieved_session.gotten_words
     assert GJ.already_gotten in retrieved_session.guess(an_answer)
     assert GJ.already_gotten in retrieved_session.guess(a_pangram)
 
     session.make_primary_session()
-    assert SessionBasedSpellingBee.get_primary_session_id(test_db) == session.session_id
-    assert SessionBasedSpellingBee.retrieve_saved("primary", test_db) == session
+    assert SessionBee.get_primary_session_id(test_db) == session.session_id
+    retrieved_session = SessionBee.retrieve_saved("primary", test_db)
+    assert retrieved_session == session
+    assert retrieved_session.image == session.image == current.image
 
     print("demo complete; tests passed")
 

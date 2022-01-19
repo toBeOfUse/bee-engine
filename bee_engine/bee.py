@@ -420,7 +420,7 @@ class SpellingBee():
             return None
 
 
-class SessionBasedSpellingBee(SpellingBee):
+class SessionBee(SpellingBee):
     """
     Extends the SpellingBee class by also storing a set of successful guesses
     so far that are associated with a specific session UUID. These guesses can
@@ -438,7 +438,7 @@ class SessionBasedSpellingBee(SpellingBee):
             gotten_words: set[str] = None,
             metadata: dict = {}):
         """
-        Constructs a new SessionBasedSpellingBee object with a unique string ID
+        Constructs a new SessionBee object with a unique string ID
         and arbitrary starting data.
         """
         super().__init__(
@@ -524,7 +524,7 @@ class SessionBasedSpellingBee(SpellingBee):
         """
         if self.db_path is None:
             return
-        SessionBasedSpellingBee.save_primary_session_id(
+        SessionBee.save_primary_session_id(
             self.session_id, self.db_path
         )
         
@@ -556,7 +556,7 @@ class SessionBasedSpellingBee(SpellingBee):
             cls, 
             session_id: str, 
             db_path: str = default_db
-        ) -> Optional[SessionBasedSpellingBee]:
+        ) -> Optional[SessionBee]:
         """
         Method allowing you to retrieve a specific session from the database.
         If you only want to persist one session at a time and don't want to
@@ -569,7 +569,7 @@ class SessionBasedSpellingBee(SpellingBee):
         conn = cls.get_connection(db_path)
         cur = conn.cursor()
         if session_id == "primary":
-            session_id = SessionBasedSpellingBee.get_primary_session_id(db_path)
+            session_id = SessionBee.get_primary_session_id(db_path)
             if session_id is None:
                 return None
         active_session = cur.execute(
@@ -587,7 +587,7 @@ class SessionBasedSpellingBee(SpellingBee):
         return result
 
     @classmethod
-    async def fetch_from_nyt(cls) -> SessionBasedSpellingBee:
+    async def fetch_from_nyt(cls) -> SessionBee:
         """Convenience method for fetching a SpellingBee from the NYT and
         creating a new session for it in one swoop."""
         return cls(await SpellingBee.fetch_from_nyt())
