@@ -266,7 +266,7 @@ class SpellingBee():
                 game["pangrams"],
                 game["answers"])
 
-    def respond_to_guesses(self, guess: str, already_gotten: set[str]=set()) -> list[str]:
+    def respond_to_guesses(self, guess: str, gotten_words: set[str]=set()) -> list[str]:
         """
         A wrapper around the `guess` method that takes a string with,
         potentially, multiple words in it instead of just one, and returns
@@ -275,8 +275,8 @@ class SpellingBee():
         signifying the count if there are more than one accepted answers, then a
         fried egg emoji if any of the accepted answers are pangrams, then a
         handshake emoji if any of the words pulled out of `guess` are also in
-        `already_gotten`. As when using `guess`, the new words are then added to
-        `already_gotten`.
+        `gotten_words`. As when using `guess`, the new words are then added to
+        `gotten_words`.
         """
         num_emojis = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
         reactions = []
@@ -285,7 +285,7 @@ class SpellingBee():
         pangram = False
         already_gotten = False
         for word in words:
-            guess_result = self.guess(word, already_gotten)
+            guess_result = SpellingBee.guess(self, word, gotten_words)
             if SpellingBee.GuessJudgement.good_word in guess_result:
                 points += 1
             if SpellingBee.GuessJudgement.pangram in guess_result:
@@ -632,4 +632,6 @@ class SessionBee(SpellingBee):
         )
     
     def respond_to_guesses(self, guess: str) -> list[str]:
-        return super().respond_to_guesses(guess, self.gotten_words)
+        result = super().respond_to_guesses(guess, self.gotten_words)
+        self.save_session()
+        return result
