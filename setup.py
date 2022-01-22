@@ -9,11 +9,11 @@ trie_explorer = Extension(
 
 setup(
     name='bee_engine',
-    version='0.5.0',
-    packages=['bee_engine'],
+    version='0.6.0',
+    packages=['bee_engine', 'bee_engine.trie_explorer'],
     install_requires=["inflect", "cairosvg", "pillow", "aiohttp[speedups]"],
     package_data={
-        "": ["images/*.svg", "data/*.txt", "data/words.db"],
+        "": ["images/*.svg", "data/*.txt", "trie_explorer/*.txt" "data/words.db"],
     },
     ext_modules=cythonize([trie_explorer])
 )
