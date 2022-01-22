@@ -3,7 +3,6 @@ from typing import Optional
 from io import BytesIO
 import traceback
 import struct
-import cython
 from . import trieparse
 
 
