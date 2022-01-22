@@ -41,14 +41,14 @@ async def demo():
 ```python3
 # The hint table is accessible too, through the SpellingBee.HintTable class:
 print(puzzle.get_hints().format_table())
-""" 4  5  6  7  8  9  Σ
-    C  -  4  -  3  -  -  7
-    E  -  -  1  -  -  -  1
-    H  4  2  1  1  -  -  8
-    N  -  -  -  1  1  -  2
-    U  -  -  -  1  1  1  3
-    Σ  4  6  2  6  2  1  21"""
-# (no leading spaces are present in the actual outputted lines)
+"""\
+   4  5  6  7  8  9  Σ
+C  -  4  -  3  -  -  7
+E  -  -  1  -  -  -  1
+H  4  2  1  1  -  -  8
+N  -  -  -  1  1  -  2
+U  -  -  -  1  1  1  3
+Σ  4  6  2  6  2  1  21"""
 
 print(puzzle.get_hints().format_two_letters())
 # 'Ch: 7, Eu: 1, He: 4, Hu: 4, Nu: 2, Un: 3'
