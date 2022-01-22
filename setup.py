@@ -4,7 +4,9 @@ from Cython.Build import cythonize
 
 trie_explorer = Extension(
     name="bee_engine.trie_explorer.trieparse",
-    sources=["bee_engine/trie_explorer/trieparse.pyx", "bee_engine/trie_explorer/src/trieparse.c"],
+    sources=[
+        "bee_engine/trie_explorer/trieparse.pyx",
+        "bee_engine/trie_explorer/src/trieparse.c"],
     include_dirs=["bee_engine/trie_explorer/src/"])
 
 setup(
@@ -13,7 +15,14 @@ setup(
     packages=['bee_engine', 'bee_engine.trie_explorer'],
     install_requires=["inflect", "cairosvg", "pillow", "aiohttp[speedups]"],
     package_data={
-        "": ["images/*.svg", "data/*.txt", "trie_explorer/*.txt" "data/words.db"],
+        "": [
+            "images/*.svg",
+            "data/*.txt",
+            "trie_explorer/*.txt",
+            "data/words.db",
+            # these last two aren't data but are apparently required to be here :|
+            "**/*.pyx",
+            "bee_engine/trie_explorer/src/trieparse.h"],
     },
     ext_modules=cythonize([trie_explorer])
 )
