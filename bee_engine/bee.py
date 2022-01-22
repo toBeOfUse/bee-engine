@@ -120,7 +120,8 @@ class SpellingBee():
             outside (list[str]): Single character strings containing the other usable
             letters for the bee.
             pangrams (list[str]): Valid bee answers that use every available letter.
-            answers (list[str]): All valid bee answers.
+            answers (list[str]): Other valid bee answers; although you can include
+            the pangrams here as well.
         """
         self.day = day
         self.center = center.upper()
