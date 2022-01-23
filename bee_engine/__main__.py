@@ -68,6 +68,7 @@ async def demo():
             GJ.already_gotten not in pangram_guess and
             GJ.wrong_word not in pangram_guess)
     assert GJ.already_gotten in session.guess(a_pangram)
+    session.metadata = {"a": "b"}
     session.persist_to(test_db)
 
     retrieved_session = SessionBee.retrieve_saved(session.session_id, test_db)
@@ -81,6 +82,7 @@ async def demo():
     retrieved_session = SessionBee.retrieve_saved("primary", test_db)
     assert retrieved_session == session
     assert retrieved_session.image == session.image == current.image
+    assert retrieved_session.metadata["a"] == "b"
 
     print("demo complete; tests passed")
 

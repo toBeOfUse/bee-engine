@@ -481,7 +481,7 @@ class SessionBee(SpellingBee):
         return self._metadata
 
     @metadata.setter
-    def set_metadata(self, new_data: dict):
+    def metadata(self, new_data: dict):
         self._metadata = new_data
         self.save_session()
 
