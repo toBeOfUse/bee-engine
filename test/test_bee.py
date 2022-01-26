@@ -1,5 +1,6 @@
 from unittest import TestCase
-from bee_engine.bee import SpellingBee
+from bee_engine.bee import SessionBee, SpellingBee
+GJ = SpellingBee.GuessJudgement
 
 class SpellingBeeTest(TestCase):
     def setUp(self):
@@ -21,7 +22,6 @@ class SpellingBeeTest(TestCase):
         self.assertTrue(all(x in self.bee.answers for x in self.bee.pangrams))
     
     def test_word_judgements(self):
-        GJ = SpellingBee.GuessJudgement
         self.assertTrue(self.bee.does_word_count("hunk"))
         self.assertFalse(self.bee.does_word_count("zamboni"))
         self.assertTrue(self.bee.does_word_count("Chunked"))
@@ -36,6 +36,7 @@ class SpellingBeeTest(TestCase):
         self.assertEqual(gotten_pangram_judgement,
             {GJ.good_word, GJ.pangram, GJ.already_gotten})
         self.assertEqual(self.bee.guess("batarang"), {GJ.wrong_word})
+        # TODO: respond_to_guesses reactions
     
     def test_points(self):
         self.assertEqual(self.bee.valid_words_to_points(["hunk"]), 1)
@@ -48,3 +49,20 @@ class SpellingBeeTest(TestCase):
         )
         self.assertEqual(self.bee.max_points, 127)
         self.assertEqual(self.bee.get_ranking({"chunked", "hunk"}), "Good")
+
+class SessionBeeWrappersTest(SpellingBeeTest):
+    def setUp(self):
+        super().setUp()
+        self.bee = SessionBee(self.bee)
+    
+    def test_internal_gotten_words(self):
+        self.bee.guess("chunk")
+        self.bee.guess("chunked")
+        self.bee.guess("hunk")
+        self.assertEqual(self.bee.percentage_words_gotten(), 3/21*100)
+        self.assertEqual(self.bee.guess("chunk"), {GJ.already_gotten, GJ.good_word})
+        self.assertNotIn("chunk", self.bee.get_unguessed_words())
+        self.assertIn("🤝", self.bee.respond_to_guesses("hunk"))
+        self.assertEqual(self.bee.points_scored(), 20)
+        self.assertEqual(self.bee.points_scored_percentage(), 20/127*100)
+        self.assertEqual(self.bee.get_ranking(), "Solid")
