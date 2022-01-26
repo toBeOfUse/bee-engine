@@ -13,7 +13,7 @@ from bee_engine import SpellingBee
 async def demo():
     # Basic information
     puzzle = await SpellingBee.fetch_from_nyt()
-    print(puzzle.date)                         # "2022-01-16"
+    print(puzzle.day)                          # "2022-01-16"
     print(puzzle.center)                       # "H"
     print(puzzle.outside)                      # ["U","D","C","E","K","N"]
     print(len(puzzle.answers))                 # 21
@@ -34,6 +34,14 @@ async def demo():
     # {"accepted word", "already gotten", "pangram"}
 
     print(puzzle.guess("batarang"))            # {"unaccepted word"}
+
+    print(puzzle.max_points)                   # 127
+    print(puzzle.valid_words_to_points(        # 15
+        ["hunk", "chunked"]
+    ))
+    print(puzzle.get_ranking(                  # "Good"
+        {"chunked", "hunk"}
+    )
 ```
 
 ### Obtaining Hints:

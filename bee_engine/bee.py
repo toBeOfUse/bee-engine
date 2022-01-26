@@ -6,7 +6,7 @@ import json
 import sqlite3
 from enum import Enum
 from collections import defaultdict
-from typing import Literal, Optional
+from typing import Literal, Optional, Sequence
 import re
 from urllib.error import HTTPError
 from uuid import uuid4 as uuid
@@ -138,6 +138,52 @@ class SpellingBee():
 
     def percentage_complete(self, gotten_words: set[str]):
         return round(len(gotten_words) / len(self.answers) * 100, 1)
+    
+    @staticmethod
+    def any_words_to_points(words: Sequence[str]):
+        points = 0
+        for word in map(lambda x: x.lower(), words):
+            if len(word) == 4:
+                points += 1
+            else:
+                points += len(word)
+                if len(set(word)) == 7:
+                    points += 7
+        return points
+    
+    def valid_words_to_points(self, words: Sequence[str]):
+        return self.any_words_to_points(
+            (x for x in words if self.does_word_count(x))
+        )
+    
+    @property
+    def max_points(self):
+        return self.valid_words_to_points(self.answers)
+    
+    def percentage_points_complete(self, gotten_words: set[str]):
+        return (self.valid_words_to_points(gotten_words)/self.max_points)*100
+    
+    def get_ranking(self, gotten_words: set[str]) -> str:
+        percentage = round(self.percentage_points_complete(gotten_words))
+        rankings = {
+            0: "Beginner",
+            2: "Good Start",
+            5: "Moving Up",
+            8: "Good",
+            15: "Solid",
+            25: "Nice",
+            40: "Great",
+            50: "Amazing",
+            70: "Genius",
+            100: "Queen Bee"
+        }
+        achieved = ""
+        for ranking in rankings:
+            if percentage > ranking:
+                achieved = rankings[ranking]
+            else:
+                break
+        return achieved
 
     def does_word_count(self, word: str) -> bool:
         return word.lower() in self.answers
@@ -652,3 +698,9 @@ class SessionBee(SpellingBee):
         result = super().respond_to_guesses(guess, self.gotten_words)
         self.save_session()
         return result
+    
+    def percentage_points_complete(self):
+        return super().percentage_points_complete(self.gotten_words)
+
+    def get_ranking(self) -> str:
+        return super().get_ranking(self.gotten_words)
