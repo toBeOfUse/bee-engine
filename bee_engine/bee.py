@@ -164,7 +164,7 @@ class SpellingBee():
         return (self.valid_words_to_points(gotten_words)/self.max_points)*100
     
     def get_ranking(self, gotten_words: set[str]) -> str:
-        percentage = round(self.points_scored_percentage(gotten_words))
+        points = self.points_scored_percentage(gotten_words)
         rankings = {
             0: "Beginner",
             2: "Good Start",
@@ -177,10 +177,11 @@ class SpellingBee():
             70: "Genius",
             100: "Queen Bee"
         }
+        thresholds = {round(k/100*self.max_points): v for k, v in rankings.items()}
         achieved = ""
-        for ranking in rankings:
-            if percentage > ranking:
-                achieved = rankings[ranking]
+        for threshold, ranking in thresholds.items():
+            if points >= threshold:
+                achieved = ranking
             else:
                 break
         return achieved
