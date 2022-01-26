@@ -667,40 +667,42 @@ class SessionBee(SpellingBee):
         creating a new session for it in one swoop."""
         return cls(await SpellingBee.fetch_from_nyt())
 
-    @property
-    def percentage_complete(self):
-        return super().percentage_complete(self.gotten_words)
+    def percentage_words_gotten(self, gotten_words: Optional[set[str]]=None):
+        return super().percentage_words_gotten(gotten_words or self.gotten_words)
 
-    def guess(self, word: str) -> set[SpellingBee.GuessJudgement]:
-        result = super().guess(word, self.gotten_words)
+    def guess(self, word: str, gotten_words: Optional[set[str]]=None) -> set[SpellingBee.GuessJudgement]:
+        result = super().guess(word, gotten_words or self.gotten_words)
         self.save_session()
         return result
 
-    def get_unguessed_words(self, sort_key=get_word_rank) -> list[str]:
-        return super().get_unguessed_words(self.gotten_words, sort_key)
+    def get_unguessed_words(self, gotten_words: Optional[set[str]]=None, sort_key=get_word_rank) -> list[str]:
+        return super().get_unguessed_words(gotten_words or self.gotten_words, sort_key)
 
     def get_unguessed_hints(self) -> SpellingBee.HintTable:
         return SpellingBee.HintTable(self.get_unguessed_words(sort_key=None))
 
     def list_gotten_words(
-            self, separate_pangrams=True, enclose_with: list[str] = ["", ""],
+            self, gotten_words: Optional[set[str]]=None, separate_pangrams=True, enclose_with: list[str] = ["", ""],
             initial_capital=False) -> str:
         """Lists the words gotten in this session so far in accordance with the
         formatting rules documented in the superclass method."""
         return super().list_words(
-            self.gotten_words,
+            gotten_words or self.gotten_words,
             separate_pangrams,
             enclose_with,
             initial_capital
         )
     
-    def respond_to_guesses(self, guess: str) -> list[str]:
-        result = super().respond_to_guesses(guess, self.gotten_words)
+    def respond_to_guesses(self, guess: str, gotten_words: Optional[set[str]]=None) -> list[str]:
+        result = super().respond_to_guesses(guess, gotten_words or self.gotten_words)
         self.save_session()
         return result
     
-    def percentage_points_complete(self):
-        return super().percentage_points_complete(self.gotten_words)
+    def points_scored(self, gotten_words: Optional[set[str]]=None):
+        return super().valid_words_to_points(gotten_words or self.gotten_words)
 
-    def get_ranking(self) -> str:
-        return super().get_ranking(self.gotten_words)
+    def points_scored_percentage(self, gotten_words: Optional[set[str]]=None):
+        return super().points_scored_percentage(gotten_words or self.gotten_words)
+
+    def get_ranking(self, gotten_words: Optional[set[str]]=None) -> str:
+        return super().get_ranking(gotten_words or self.gotten_words)
