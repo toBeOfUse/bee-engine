@@ -83,6 +83,7 @@ async def demo():
     assert retrieved_session == session
     assert retrieved_session.image == session.image == current.image
     assert retrieved_session.metadata["a"] == "b"
+    session.get_unguessed_hints()
 
     print("demo complete; tests passed")
 

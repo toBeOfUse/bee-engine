@@ -634,7 +634,7 @@ class SessionBee(SpellingBee):
         return super().get_unguessed_words(self.gotten_words, sort_key)
 
     def get_unguessed_hints(self) -> SpellingBee.HintTable:
-        return super().get_unguessed_hints(self.gotten_words)
+        return SpellingBee.HintTable(self.get_unguessed_words(sort_key=None))
 
     def list_gotten_words(
             self, separate_pangrams=True, enclose_with: list[str] = ["", ""],
