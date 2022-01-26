@@ -136,8 +136,8 @@ class SpellingBee():
     def __eq__(self, other):
         return [self.center]+self.outside == [other.center]+other.outside
 
-    def percentage_complete(self, gotten_words: set[str]):
-        return round(len(gotten_words) / len(self.answers) * 100, 1)
+    def percentage_words_gotten(self, gotten_words: set[str]):
+        return len(gotten_words) / len(self.answers) * 100
     
     @staticmethod
     def any_words_to_points(words: Sequence[str]):
@@ -160,11 +160,11 @@ class SpellingBee():
     def max_points(self):
         return self.valid_words_to_points(self.answers)
     
-    def percentage_points_complete(self, gotten_words: set[str]):
+    def points_scored_percentage(self, gotten_words: set[str]):
         return (self.valid_words_to_points(gotten_words)/self.max_points)*100
     
     def get_ranking(self, gotten_words: set[str]) -> str:
-        percentage = round(self.percentage_points_complete(gotten_words))
+        percentage = round(self.points_scored_percentage(gotten_words))
         rankings = {
             0: "Beginner",
             2: "Good Start",

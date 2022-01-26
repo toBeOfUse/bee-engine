@@ -137,12 +137,12 @@ from bee_engine import SessionBee
 
 session = SessionBee(puzzle)
 session.guess("hunched")
-print(session.gotten_words)              # {"hunched"}
+print(session.gotten_words)                # {"hunched"}
 
 # SessionBee objects have all the same methods as SpellingBee objects but they
 # automatically make use of the gotten_words property when possible:
-print(session.percentage_complete())     # 4.7
-print(session.list_gotten_words())       # "hunched."
+print(session.percentage_words_gotten())   # 4.761904761904762
+print(session.list_gotten_words())         # "hunched."
 assert SpellingBee.GuessJudgement.already_gotten in session.guess("hunched")
 # see also: get_unguessed_words(), get_unguessed_hints(), respond_to_guesses()
 
