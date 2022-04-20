@@ -463,8 +463,11 @@ for path in (Path(__file__).parent/Path("images/")).glob("puzzle_template_*.svg"
     name = re.match("^puzzle_template_(\w*?).svg$", path.name).group(1)
     BeeRenderer.register_renderer(name, SVGTextTemplateRenderer(str(path)))
 
-# BeeRenderer.available_renderers.append(SVGImageTemplateRenderer(
-#     Path("images", "image_puzzle_template_1.svg"), Path("fonts", "pencil")))
+BeeRenderer.register_renderer(
+    "sketchbook",
+    SVGImageTemplateRenderer(
+        Path("images", "image_puzzle_template_1.svg"), Path("images", "fonts", "pencil"))
+    )
 
 # for path in Path("images/").glob("blender_template_*.blend"):
 #     BeeRenderer.available_renderers.append(BlenderRenderer(path))
