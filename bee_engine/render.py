@@ -165,6 +165,30 @@ class SVGTextTemplateRenderer(SVGTemplateRenderer):
                         sibling.set_text(letter)
         return svg2png(base.toxml(encoding="utf-8"), output_width=output_width)
 
+class PerspectiveCompositeRenderer(BeeRenderer):
+    def __init__(self, fg_renderer: BeeRenderer, bg_path: PathLike, perspective_data: list[float]):
+        self.fg_renderer = fg_renderer
+        self.bg_path = bg_path
+        self.perspective_data = perspective_data
+    
+    def __repr__(self):
+        return f"{self.__class__.__name__} combining \"{self.fg_renderer}\" and \"{self.bg_path}\""
+    
+    async def render(self, puzzle: SpellingBee) -> bytes:
+        bg_image = Image.open(self.bg_path)
+        fg_bytes = await self.fg_renderer.render(puzzle)
+        fg_image = Image.open(BytesIO(fg_bytes)).transform(
+            (bg_image.width, bg_image.height),
+            Image.PERSPECTIVE,
+            self.perspective_data,
+            Image.BICUBIC
+        )
+        bg_image.alpha_composite(fg_image)
+        output = BytesIO()
+        bg_image.save(output, "png")
+        output.seek(0)
+        return output.read()
+
 
 class SVGImageTemplateRenderer(SVGTemplateRenderer):
     def __init__(self, template_path: PathLike, alphabet_path: PathLike):
@@ -469,8 +493,14 @@ BeeRenderer.register_renderer(
         Path("images", "image_puzzle_template_1.svg"), Path("images", "fonts", "pencil"))
     )
 
-# for path in Path("images/").glob("blender_template_*.blend"):
-#     BeeRenderer.available_renderers.append(BlenderRenderer(path))
+BeeRenderer.register_renderer(
+    "earth",
+    PerspectiveCompositeRenderer(
+        SVGTextTemplateRenderer(Path(__file__).parent/"images/earth_foreground.svg"),
+        Path(__file__).parent/"images/blank-earth.png",
+        [1.938636, -0.486944, -1167.37341, 0.100808, 1.751237, -380.330737, -0.000132, -0.000108])
+    )
+
 
 # BeeRenderer.available_renderers.append(
 #     GIFTemplateRenderer(
