@@ -542,7 +542,8 @@ for path in (Path(__file__).parent/Path("images/")).glob("puzzle_template_*.svg"
 BeeRenderer.register_renderer(
     "sketchbook",
     SVGImageTemplateRenderer(
-        Path("images", "image_puzzle_template_1.svg"), Path("images", "fonts", "pencil"))
+        Path(__file__).parent/"images/image_puzzle_template_1.svg",
+        Path(__file__).parent/"images/fonts/pencil/")
     )
 
 BeeRenderer.register_renderer(
