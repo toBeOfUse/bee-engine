@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg width="200"
+   height="170"
+   viewBox="0 0 52.916666 44.979168"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   sodipodi:docname="basic_letter.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+   <sodipodi:namedview id="namedview7"
+      pagecolor="#ffffff"
+      bordercolor="#111111"
+      borderopacity="1"
+      inkscape:pageshadow="0"
+      inkscape:pageopacity="0"
+      inkscape:pagecheckerboard="1"
+      inkscape:document-units="px"
+      showgrid="false"
+      units="px"
+      inkscape:zoom="1.9780292"
+      inkscape:cx="38.169305"
+      inkscape:cy="114.00236"
+      inkscape:window-width="1920"
+      inkscape:window-height="1001"
+      inkscape:window-x="-9"
+      inkscape:window-y="-9"
+      inkscape:window-maximized="1"
+      inkscape:current-layer="layer1" />
+   <defs id="defs2" />
+   <g inkscape:label="Layer 1"
+      inkscape:groupmode="layer"
+      id="layer1"
+      transform="translate(3.9601493,9.272364)">
+      <path sodipodi:type="star"
+         style="fill:#ffffff;stroke-width:37.7953;stroke-linecap:round;opacity:0"
+         id="path2646"
+         inkscape:flatsided="true"
+         sodipodi:sides="6"
+         sodipodi:cx="-58.349991"
+         sodipodi:cy="-21.881247"
+         sodipodi:r1="74.357651"
+         sodipodi:r2="64.395615"
+         sodipodi:arg1="0.52359878"
+         sodipodi:arg2="1.0471976"
+         inkscape:rounded="0"
+         inkscape:randomized="0"
+         d="M 6.0456235,15.297579 -58.349991,52.476404 -122.74561,15.297579 -122.74561,-59.060072 -58.349991,-96.238897 6.0456238,-59.060072 Z"
+         transform="matrix(0,0.34924091,-0.3558253,0,14.712283,33.595423)" />
+      <text xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:32.5919px;line-height:1.25;font-family:'Liberation Sans';-inkscape-font-specification:'Liberation Sans';text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;stroke-width:0.381936"
+         x="21.644766"
+         y="24.907598"
+         id="text1772"
+         transform="scale(1.0573079,0.94579829)">
+         <tspan sodipodi:role="line"
+            id="tspan1770"
+            style="font-family:'Liberation Sans Bold';text-align:center;text-anchor:middle;"
+            x="21.644766"
+            y="24.907598">$L</tspan>
+      </text>
+   </g>
+</svg>

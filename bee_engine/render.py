@@ -165,8 +165,12 @@ class SVGTextTemplateRenderer(SVGTemplateRenderer):
                         sibling.set_text(letter)
         return svg2png(base.toxml(encoding="utf-8"), output_width=output_width)
 
+
+"""Eight floats for the PIL perspective transform operation"""
+PerspectiveCoefficients = tuple[float, float, float, float, float, float, float, float]
+
 class PerspectiveCompositeRenderer(BeeRenderer):
-    def __init__(self, fg_renderer: BeeRenderer, bg_path: PathLike, perspective_data: list[float]):
+    def __init__(self, fg_renderer: BeeRenderer, bg_path: PathLike, perspective_data: PerspectiveCoefficients):
         self.fg_renderer = fg_renderer
         self.bg_path = bg_path
         self.perspective_data = perspective_data
@@ -186,6 +190,54 @@ class PerspectiveCompositeRenderer(BeeRenderer):
         bg_image.alpha_composite(fg_image)
         output = BytesIO()
         bg_image.save(output, "png")
+        output.seek(0)
+        return output.read()
+
+class MultiPerspectiveRenderer(BeeRenderer):
+    """
+    Each letter is rendered according to basic_letter.svg to a 200x170 image
+    (after downsampling) and then transformed by one of the perspective
+    coefficient lists
+    """
+    def __init__(self,
+     bg_path: PathLike, 
+     outer_persepctive: list[PerspectiveCoefficients], 
+     center_perspective: PerspectiveCoefficients
+    ):
+        self.bg_path = bg_path
+        self.outer_perspective = outer_persepctive
+        self.center_perspective = center_perspective
+    
+    def __repr__(self):
+        return f"{self.__class__.__name__} for {self.bg_path}"
+    
+    async def render(self, puzzle: SpellingBee) -> bytes:
+        composite = Image.open(self.bg_path)
+        with open(Path(__file__).parent/"images/basic_letter.svg", "r", encoding="utf-8") as template_file:
+            template = template_file.read()
+        def pipeline(image: Image.Image, perspective_data: PerspectiveCoefficients):
+            return image.resize(
+                (200, 170),
+                Image.LANCZOS
+            ).transform(
+                (composite.width, composite.height), 
+                Image.PERSPECTIVE,
+                perspective_data,
+                Image.BICUBIC
+            )
+        for i in range(6):
+            letter = puzzle.outside[i]
+            svg = template.replace("$L", letter.upper())
+            letter_image = svg2png(svg, output_width=800)
+            transformed = pipeline(Image.open(
+                BytesIO(letter_image)
+            ), self.outer_perspective[i])
+            composite.alpha_composite(transformed)
+        final_svg = template.replace("$L", puzzle.center.upper())
+        final_image = Image.open(BytesIO(svg2png(final_svg, output_width=800)))
+        composite.alpha_composite(pipeline(final_image, self.center_perspective))
+        output = BytesIO()
+        composite.save(output, "png")
         output.seek(0)
         return output.read()
 
@@ -500,6 +552,20 @@ BeeRenderer.register_renderer(
         Path(__file__).parent/"images/blank-earth.png",
         [1.938636, -0.486944, -1167.37341, 0.100808, 1.751237, -380.330737, -0.000132, -0.000108])
     )
+
+BeeRenderer.register_renderer(
+    "cereal",
+    MultiPerspectiveRenderer(
+        Path(__file__).parent/"images/blank-cereal.png",
+        [[2.017291, 0.252161, -1298.126801, -0.0, 2.204611, -88.184438, -0.0, 0.00072],
+        [3.042172, -0.269289, -2247.436275, 0.494028, 3.21118, -690.156731, 0.000619, 0.000917],
+        [1.842264, -0.102348, -1371.303432, 0.100341, 1.846277, -457.17339, 0.0, 0.0],
+        [1.286469, 0.055507, -844.839105, -0.024127, 1.27873, -344.388435, -0.000296, -0.000336],
+        [2.143393, 0.454151, -1224.599485, -0.349601, 2.123544, -258.656838, 0.000221, 9.6e-05],
+        [1.818048, 0.131206, -963.166921, -0.174243, 1.814884, -74.190556, 7.8e-05, -0.000394]], 
+        [1.632081, -0.346411, -970.995657, 0.349815, 1.653672, -506.341644, -0.000169, 7.6e-05]
+    )
+)
 
 # for path in (Path(__file__).parent/Path("images/")).glob("blender_template_*.blend"):
 #     name = re.match("^blender_template_(\w*?).blend$", path.name).group(1)
