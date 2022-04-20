@@ -501,6 +501,9 @@ BeeRenderer.register_renderer(
         [1.938636, -0.486944, -1167.37341, 0.100808, 1.751237, -380.330737, -0.000132, -0.000108])
     )
 
+# for path in (Path(__file__).parent/Path("images/")).glob("blender_template_*.blend"):
+#     name = re.match("^blender_template_(\w*?).blend$", path.name).group(1)
+#     BeeRenderer.register_renderer(name, BlenderRenderer(str(path)))
 
 # BeeRenderer.available_renderers.append(
 #     GIFTemplateRenderer(
@@ -528,15 +531,15 @@ BeeRenderer.register_renderer(
 async def test():
     from .bee import SpellingBee
     base_path = Path(__file__).parent
-    rs = BeeRenderer.available_renderers
     print("available renderers:")
-    print(BeeRenderer.get_available_renderer_names())
+    renderers = BeeRenderer.get_available_renderer_names()
+    print(renderers)
     letters = random.sample(["B", "C", "D", "E", "F", "G"], 6)
     if len(sys.argv) > 1:
         print(f"looking for renderers with {sys.argv[1]} in name")
     else:
-        print(f"{len(rs)} renderers available. testing...")
-    for r in rs:
+        print(f"{len(renderers)} renderers available. testing...")
+    for r in renderers:
         if len(sys.argv) > 1:
             if sys.argv[1].lower() not in str(r).lower():
                 continue
