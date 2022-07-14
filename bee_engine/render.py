@@ -178,7 +178,7 @@ class PerspectiveCompositeRenderer(BeeRenderer):
     def __repr__(self):
         return f"{self.__class__.__name__} combining \"{self.fg_renderer}\" and \"{self.bg_path}\""
     
-    async def render(self, puzzle: SpellingBee) -> bytes:
+    async def render(self, puzzle: SpellingBee, output_width: int=1200) -> bytes:
         bg_image = Image.open(self.bg_path)
         fg_bytes = await self.fg_renderer.render(puzzle)
         fg_image = Image.open(BytesIO(fg_bytes)).transform(
@@ -188,6 +188,11 @@ class PerspectiveCompositeRenderer(BeeRenderer):
             Image.BICUBIC
         )
         bg_image.alpha_composite(fg_image)
+        scale_factor = output_width/bg_image.width
+        bg_image = bg_image.resize(
+            (output_width, round(bg_image.height*scale_factor)),
+            resample=Image.LANCZOS
+        )
         output = BytesIO()
         bg_image.save(output, "png")
         output.seek(0)
@@ -211,7 +216,7 @@ class MultiPerspectiveRenderer(BeeRenderer):
     def __repr__(self):
         return f"{self.__class__.__name__} for {self.bg_path}"
     
-    async def render(self, puzzle: SpellingBee) -> bytes:
+    async def render(self, puzzle: SpellingBee, output_width: int=1200) -> bytes:
         composite = Image.open(self.bg_path)
         with open(Path(__file__).parent/"images/basic_letter.svg", "r", encoding="utf-8") as template_file:
             template = template_file.read()
@@ -236,6 +241,11 @@ class MultiPerspectiveRenderer(BeeRenderer):
         final_svg = template.replace("$L", puzzle.center.upper())
         final_image = Image.open(BytesIO(svg2png(final_svg, output_width=800)))
         composite.alpha_composite(pipeline(final_image, self.center_perspective))
+        scale_factor = output_width/composite.width
+        composite = composite.resize(
+            (output_width, round(composite.height*scale_factor)),
+            Image.LANCZOS
+        )
         output = BytesIO()
         composite.save(output, "png")
         output.seek(0)
