@@ -18,7 +18,9 @@ setup(
         "": [
             "images/*.svg",
             "images/*.png",
+            "images/*.json",
             "images/fonts/**/*.*",
+            "images/fonts/*.ttf",
             "data/*.txt",
             "trie_explorer/*.txt",
             "data/words.db",
