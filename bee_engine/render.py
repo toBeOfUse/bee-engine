@@ -214,18 +214,39 @@ class PerspectiveRenderer(BeeRenderer):
         matrix: np.array[np.array[float]]
         is_center: bool
 
+    class LetterColors:
+        def __init__(
+            self,
+            fill: str | tuple[int] = "white",
+            stroke: str | tuple[int] = "black",
+            stroke_width: int = 3
+        ):
+            self.fill = fill
+            self.stroke = stroke
+            self.stroke_width = stroke_width
+
     def __init__(
         self,
         frames: list[Frame],
         bg_image_path: PathLike,
+        outer_letter_color: LetterColors = LetterColors(),
+        center_letter_color: LetterColors = LetterColors(),
         font_resolution: int = 200
     ):
         self.frames = frames
         self.bg_image_path = bg_image_path
+        self.outer_letter_color = outer_letter_color
+        self.center_letter_color = center_letter_color
         self.font_resolution = font_resolution
 
     @classmethod
-    def from_aafine_file(cls, file_path: PathLike):
+    def from_aafine_file(
+        cls,
+        file_path: PathLike,
+        outer_letter_color: LetterColors = LetterColors(),
+        center_letter_color: LetterColors = LetterColors(),
+        font_resolution: int = 200
+    ):
         """
         Reads files produced by my aafine app; clone from
         https://github.com/toBeOfUse/aaffine or use the web version at
@@ -248,13 +269,19 @@ class PerspectiveRenderer(BeeRenderer):
             frames) == 7, f"not enough frames in aafine file {file_path}"
         assert len([x for x in frames if x.is_center]
                    ) == 1, f"wrong number of central frames in aafine file {file_path}"
-        return cls(frames, wd/f"images/{data['name']}")
+        return cls(
+            frames,
+            wd/f"images/{data['name']}",
+            outer_letter_color,
+            center_letter_color,
+            font_resolution
+        )
 
     def __repr__(self):
         return f"PerspectiveRenderer for image {self.bg_image_path}"
 
     async def render(self, puzzle: SpellingBee, output_width: int = 1200) -> bytes:
-        bg = Image.open(self.bg_image_path)
+        bg = Image.open(self.bg_image_path).convert("RGBA")
         font = ImageFont.truetype(
             str(wd/"images/fonts/LiberationSans-Bold.ttf"),
             self.font_resolution
@@ -271,14 +298,21 @@ class PerspectiveRenderer(BeeRenderer):
                 size=(self.font_resolution,)*2,
                 color=(0, 0, 0, 0)
             )
+            color = (
+                self.center_letter_color if frame.is_center else
+                self.outer_letter_color
+            )
             ImageDraw.Draw(canvas).text(
                 xy=(round(self.font_resolution/2),)*2,
                 text=letter.capitalize(),
                 font=font,
                 anchor="mm",
-                fill="white",
-                stroke_width=3,
-                stroke_fill="black"
+                fill=(0, 0, 0, 0) if color.fill is None else color.fill,
+                stroke_width=(
+                    0 if color.stroke is None else
+                    (3 if color.stroke_width is None else
+                     color.stroke_width)),
+                stroke_fill=color.stroke
             )
             normalize_screen_space = np.array(
                 [[1/bg.width, 0, 0], [0, 1/bg.height, 0], [0, 0, 1]],
@@ -322,6 +356,24 @@ BeeRenderer.register_renderer(
 BeeRenderer.register_renderer(
     "dice",
     PerspectiveRenderer.from_aafine_file(wd/"images/dice.json")
+)
+
+BeeRenderer.register_renderer(
+    "cereal",
+    PerspectiveRenderer.from_aafine_file(
+        wd/"images/cereal.json",
+        PerspectiveRenderer.LetterColors("#aaa", "black"),
+        PerspectiveRenderer.LetterColors("white", "black"),
+    )
+)
+
+BeeRenderer.register_renderer(
+    "earth",
+    PerspectiveRenderer.from_aafine_file(
+        wd/"images/earth.json",
+        PerspectiveRenderer.LetterColors(None, "black", 6),
+        PerspectiveRenderer.LetterColors("white", None)
+    )
 )
 
 
