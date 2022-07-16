@@ -13,7 +13,8 @@ setup(
     name='bee_engine',
     version='0.9',
     packages=['bee_engine', 'bee_engine.trie_explorer'],
-    install_requires=["inflect", "cairosvg", "pillow", "aiohttp[speedups]"],
+    install_requires=["inflect", "cairosvg",
+                      "pillow", "aiohttp[speedups]", "numpy"],
     package_data={
         "": [
             "images/*.svg",
