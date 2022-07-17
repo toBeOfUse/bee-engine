@@ -362,7 +362,7 @@ BeeRenderer.register_renderer(
     "cereal",
     PerspectiveRenderer.from_aafine_file(
         wd/"images/cereal.json",
-        PerspectiveRenderer.LetterColors("#aaa", "black"),
+        PerspectiveRenderer.LetterColors("#ddd", "black"),
         PerspectiveRenderer.LetterColors("white", "black"),
     )
 )
@@ -371,7 +371,7 @@ BeeRenderer.register_renderer(
     "earth",
     PerspectiveRenderer.from_aafine_file(
         wd/"images/earth.json",
-        PerspectiveRenderer.LetterColors(None, "black", 6),
+        PerspectiveRenderer.LetterColors("#fff8", "black", 6),
         PerspectiveRenderer.LetterColors("white", None)
     )
 )
