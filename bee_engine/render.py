@@ -355,7 +355,7 @@ BeeRenderer.register_renderer(
 
 BeeRenderer.register_renderer(
     "dice",
-    PerspectiveRenderer.from_aafine_file(wd/"images/dice.json")
+    PerspectiveRenderer.from_aafine_file(wd/"images/dice-2.json")
 )
 
 BeeRenderer.register_renderer(

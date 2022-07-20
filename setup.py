@@ -11,7 +11,7 @@ trie_explorer = Extension(
 
 setup(
     name='bee_engine',
-    version='0.9.3',
+    version='0.9.4',
     packages=['bee_engine', 'bee_engine.trie_explorer'],
     install_requires=["inflect", "cairosvg",
                       "pillow", "aiohttp[speedups]", "numpy"],
