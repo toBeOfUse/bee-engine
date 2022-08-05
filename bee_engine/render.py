@@ -21,9 +21,13 @@ import math
 
 from cairosvg import svg2png
 from PIL import Image, ImageFont, ImageDraw
-import numpy as np
 
 wd = Path(__file__).parent
+
+def matrix_product(a: list[list[float]], b: list[list[float]]):
+    zip_b = list(zip(*b))
+    return [[sum(ele_a*ele_b for ele_a, ele_b in zip(row_a, col_b)) 
+             for col_b in zip_b] for row_a in a]
 
 
 def make_base(width: float, height: float) -> list[float]:
@@ -211,7 +215,7 @@ class PerspectiveRenderer(BeeRenderer):
 
     @dataclass
     class Frame:
-        matrix: np.array[np.array[float]]
+        matrix: list[list[float]]
         is_center: bool
 
     class LetterColors:
@@ -261,7 +265,7 @@ class PerspectiveRenderer(BeeRenderer):
         for frame_data in data["frames"]:
             frames.append(
                 PerspectiveRenderer.Frame(
-                    np.array(frame_data["3x3ReverseMatrixNormalized"]),
+                    frame_data["3x3ReverseMatrixNormalized"],
                     "center" in frame_data["name"].lower()
                 )
             )
@@ -314,15 +318,18 @@ class PerspectiveRenderer(BeeRenderer):
                      color.stroke_width)),
                 stroke_fill=color.stroke
             )
-            normalize_screen_space = np.array(
-                [[1/bg.width, 0, 0], [0, 1/bg.height, 0], [0, 0, 1]],
-            )
-            to_object_space_pixels = np.array(
-                [[self.font_resolution, 0, 0],
-                    [0, self.font_resolution, 0], [0, 0, 1]]
-            )
-            coeffs = to_object_space_pixels.dot(
-                frame.matrix.dot(normalize_screen_space))
+            normalize_screen_space = [
+                [1/bg.width, 0, 0], [0, 1/bg.height, 0], [0, 0, 1]
+            ]
+            to_object_space_pixels = [
+                [self.font_resolution, 0, 0],
+                [0, self.font_resolution, 0],
+                [0, 0, 1]   
+            ]
+            coeffs = matrix_product(
+                to_object_space_pixels,
+                (matrix_product(frame.matrix, normalize_screen_space))
+                )
             placed_letter = canvas.transform(
                 size=(bg.width, bg.height),
                 method=Image.PERSPECTIVE,
