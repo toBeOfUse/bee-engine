@@ -177,9 +177,8 @@ class SpellingBee():
             70: "Genius",
             100: "Queen Bee"
         }
-        thresholds = {round(k/100*self.max_points): v for k, v in rankings.items()}
         achieved = ""
-        for threshold, ranking in thresholds.items():
+        for threshold, ranking in rankings.items():
             if points >= threshold:
                 achieved = ranking
             else:
