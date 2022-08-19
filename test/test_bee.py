@@ -49,6 +49,10 @@ class SpellingBeeTest(TestCase):
         )
         self.assertEqual(self.bee.max_points, 127)
         self.assertEqual(self.bee.get_ranking({"chunked", "hunk"}), "Good")
+        self.assertEqual(self.bee.get_ranking({"unheeded", "chucked", "unchecked",
+            "hence", "heeded", "nunchuk", "chunk", "nunchuck", "hunched", "hunk",
+            "check", "hunch", "chunked", "cheek", "checked", "chuck", "hued",
+            "heck", "heed", "uncheck", "eunuch"}), "Queen Bee")
 
 class SessionBeeWrappersTest(SpellingBeeTest):
     def setUp(self):
